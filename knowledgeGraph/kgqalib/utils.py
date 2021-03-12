@@ -144,10 +144,10 @@ class SQPBuilder():
     """
     Usage:
         # downloads distilbert
-        sb = SQPCBuilder().load("/path/to/my/model.bin")
+        sb = SQPBuilder().load("/path/to/my/model.bin")
 
-        patterns, raw_probs = sb.transform("select...")
-        patterns, raw_probs = sb.transform(["select1...", "select2..."])
+        patterns, raw_probs = sb.transform("who is...")
+        patterns, raw_probs = sb.transform(["what are...", "how many..."])
 
         #####
 
