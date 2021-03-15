@@ -1,7 +1,6 @@
 tensorflow==2.4.1
 transformers==4.3.3
 numpy==1.19.5
-sent2vec==0.2.0
 python-Levenshtein==0.12.2
 nltk==3.5
 pandas==1.2.3
