@@ -25,7 +25,8 @@ from nltk.corpus import stopwords
 from scipy import spatial
 
 class QueryGraphBuilder():
-    def __init__(self, embeddings = None, bert_similarity = True):
+    def __init__(self, embeddings = None, bert_similarity = True, entities_cap = 25):
+        self.entities_cap = entities_cap
         if bert_similarity:
             self.vectorizer = Vectorizer()
         else:
@@ -115,7 +116,7 @@ class QueryGraphBuilder():
                         return [neighbor]
         return []
     
-    def __get_candidate_entities(self, Q, NS, endpoint = 'http://dbpedia.org/sparql'):
+    def __get_candidate_entities(self, Q, NS, entities, endpoint = 'http://dbpedia.org/sparql'):
         if not NS:
             return []
         def get_node_label(node, NS):
@@ -130,6 +131,7 @@ class QueryGraphBuilder():
 
         current_triples = [(get_node_label(sub, NS),pred["label"],get_node_label(obj, NS))
                                 for sub,obj,pred in Q.edges(data=True) if "label" in pred]
+
         body = "    \n".join([f"{sub} {pred} {obj} ." for sub,pred,obj in current_triples])
         query = f"""
 SELECT DISTINCT ?var
@@ -145,7 +147,15 @@ WHERE
             print(f"Exception {e} on query:\n\n{query}")
             raise e
 
-        return [var[0].n3() for var in results]
+        result_list = []
+        for var in results:
+            n3 = var[0].n3()
+            if n3 in entities:
+                result_list.insert(0, n3)
+            else:
+                result_list.append(n3)
+
+        return result_list[:self.entities_cap]
     
     """
     Build query graph by a single step.
@@ -180,7 +190,7 @@ WHERE
             # get adjacent unexplored node
             NS = self.__get_adjacent_unexplored(Q)
             # get entities corresponding to NS
-            cn = self.__get_candidate_entities(Q, NS)
+            cn = self.__get_candidate_entities(Q, NS, entities)
 
             return Q, NS, cn
 
@@ -216,7 +226,7 @@ WHERE
         # get adjacent unexplored node
         NS = self.__get_adjacent_unexplored(Q)
         # get entities corresponding to NS
-        cn = self.__get_candidate_entities(Q, NS)
+        cn = self.__get_candidate_entities(Q, NS, entities)
 
         return Q, NS, cn
 
@@ -251,6 +261,43 @@ WHERE
             Q, NS, cn = self.build_step(question, cn, Q, NS, entities)
 
         return Q
+
+    def ask(self, question, entities, pattern, endpoint = 'http://dbpedia.org/sparql'):
+        Q = self.build(question, entities, pattern)
+
+        def get_node_label(node):
+            found = Q.nodes[node]
+            if found:
+                return found["label"]
+            else:
+                return "?"+node.lower()
+        def get_pred_label(pred, sub, obj):
+            found = "label" in pred
+            if found:
+                return pred["label"]
+            else:
+                raise Exception("All preds should be now labeled.")
+                # return "?"+sub.lower()+obj.lower()
+
+        current_triples = [(get_node_label(sub),get_pred_label(pred, sub, obj),get_node_label(obj))
+                                for sub,obj,pred in Q.edges(data=True)]
+
+        body = "    \n".join([f"{sub} {pred} {obj} ." for sub,pred,obj in current_triples])
+        query = f"""
+SELECT DISTINCT *
+WHERE
+{{
+    {body}
+}}
+"""
+
+        try:
+            results = sparql.query(endpoint, query)
+        except Exception as e:
+            print(f"Exception {e} on query:\n\n{query}")
+            raise e
+
+        return pd.DataFrame([[item.n3() for item in row] for row in results])
 
     """
     Get graph pattern for a pattern p.
