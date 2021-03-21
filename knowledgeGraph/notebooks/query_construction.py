@@ -23,6 +23,7 @@ from numpy.linalg import norm
 from Levenshtein import distance as levenshtein_distance
 from nltk.corpus import stopwords
 from scipy import spatial
+import generateQuery
 
 class QueryGraphBuilder():
     def __init__(self, embeddings = None, bert_similarity = True, entities_cap = 25):
@@ -96,9 +97,9 @@ class QueryGraphBuilder():
         return next((node for node in NS
                     # if unlabeled
                     if not graph_pattern.nodes[node]
-                    # if we want an object we need out degree
+                    # if we want an sub we need out degree
                     and ((given == "sub" and graph_pattern.out_degree(node) > 0)
-                        # if we want a subject we need in degree
+                        # if we want a obj we need in degree
                         or (given == "obj" and graph_pattern.in_degree(node) > 0))),
                 None)
     
@@ -180,7 +181,8 @@ WHERE
                     """)
             unlabeled_node = NS[0]
             if cn in entities:
-                Q.nodes[unlabeled_node]['label'] = r["entity"]
+                Q.nodes[unlabeled_node]['label'] = cn
+                entities.remove(cn)
             elif self.var_num > 0:
                 # variable
                 Q.nodes[unlabeled_node]['label'] = '?' + str(self.var_num)
@@ -205,6 +207,7 @@ WHERE
         if r["entity"] in entities:
             # entity found
             Q.nodes[unlabeled_node]['label'] = r["entity"]
+            entities.remove(r["entity"])
         elif self.var_num > 0:
             # variable
             Q.nodes[unlabeled_node]['label'] = '?' + str(self.var_num)
@@ -262,34 +265,8 @@ WHERE
 
         return Q
 
-    def ask(self, question, entities, pattern, endpoint = 'http://dbpedia.org/sparql'):
-        Q = self.build(question, entities, pattern)
-
-        def get_node_label(node):
-            found = Q.nodes[node]
-            if found:
-                return found["label"]
-            else:
-                return "?"+node.lower()
-        def get_pred_label(pred, sub, obj):
-            found = "label" in pred
-            if found:
-                return pred["label"]
-            else:
-                raise Exception("All preds should be now labeled.")
-                # return "?"+sub.lower()+obj.lower()
-
-        current_triples = [(get_node_label(sub),get_pred_label(pred, sub, obj),get_node_label(obj))
-                                for sub,obj,pred in Q.edges(data=True)]
-
-        body = "    \n".join([f"{sub} {pred} {obj} ." for sub,pred,obj in current_triples])
-        query = f"""
-SELECT DISTINCT *
-WHERE
-{{
-    {body}
-}}
-"""
+    def ask_step(self, question, Q, endpoint = 'http://dbpedia.org/sparql'):
+        query = generateQuery.generateQuery(question, Q)
 
         try:
             results = sparql.query(endpoint, query)
@@ -298,6 +275,11 @@ WHERE
             raise e
 
         return pd.DataFrame([[item.n3() for item in row] for row in results])
+
+    def ask(self, question, entities, pattern, endpoint = 'http://dbpedia.org/sparql'):
+        Q = self.build(question, entities, pattern)
+
+        return self.ask_step(question, Q, endpoint)
 
     """
     Get graph pattern for a pattern p.
@@ -356,7 +338,7 @@ WHERE
         else:
             filter_literal = ''
 
-        exclusions_string = ",\n                ".join(exclusions)
+        exclusions_string = ",\n                ".join(self.exclusions_list)
         body = """
 UNION
 """.join([f"""    {{
@@ -486,12 +468,8 @@ if __name__ == "__main__":
 
     query_builder = QueryGraphBuilder(embeddings = embeddings, bert_similarity = False)
 
-    Q = query_builder.build(question='What university campuses are situated in Indiana?',
+    res = query_builder.ask(question='What university campuses are situated in Indiana?',
                             entities=["<http://dbpedia.org/resource/Indiana>"],
                             pattern='p2')
 
-    query_builder.draw_graph(Q)
-    # -
-
-    for edge in asd:
-        print(edge[0])
+    print(res)
