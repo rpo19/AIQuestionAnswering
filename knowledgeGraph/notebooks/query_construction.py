@@ -173,6 +173,11 @@ WHERE
         logging.debug(f"{desc} Elapsed time: {elapsed}") 
         return ret
 
+    def __are_there_unlabeled_edges(self, Q):
+        # None when all labeled
+        res = next((edge for edge in Q.edges(data=True) if not edge[2]), None)
+        return res is not None
+
     """
     Build query graph by a single step.
 
@@ -184,11 +189,10 @@ WHERE
     :return: query graph
     """
     def build_step(self, question, cn, Q, NS, entities):
-        # get relations connected to cn
-        R = self.__get_time("Get relations", self.__get_relations, (Q, NS, cn))
-        print(f"Got relations: {R.shape}")
 
-        if R is None:
+        exists_unlabeled_edge = self.__are_there_unlabeled_edges(Q)
+
+        if not exists_unlabeled_edge:
             # leaf node
             if len(NS) > 1:
                 raise Exception(f"""
@@ -212,6 +216,10 @@ WHERE
 
             return Q, NS, cn
 
+        # get relations connected to cn
+        R = self.__get_time("Get relations", self.__get_relations, (Q, NS, cn))
+        logging.debug(f"Got relations: {R.shape}")
+
         r=self.__get_time("Get most relevant", self.__get_most_relevant_relation, (question, R))
 
         # get an unlabelled node in NS which has a relation respecting r direction
@@ -231,7 +239,7 @@ WHERE
         # get unlabeled edge from unlabeled_node
         unlabeled_edge=self.__get_unlabeled_edge(Q, unlabeled_node)
         if unlabeled_edge is None:
-            return Q, [], []
+            raise Exception("No unlabeled edge. This should not happen!")
 
         # assemble relation in Q
         Q[unlabeled_edge[0]][unlabeled_edge[1]]['label']=r["pred"]
