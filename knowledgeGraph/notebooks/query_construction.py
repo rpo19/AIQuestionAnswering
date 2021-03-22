@@ -182,6 +182,7 @@ WHERE
     def build_step(self, question, cn, Q, NS, entities):
         # get relations connected to cn
         R = self.__get_time("Get relations", self.__get_relations, (Q, NS, cn))
+        print(f"Got relations: {R.shape}")
 
         if R is None:
             # leaf node
