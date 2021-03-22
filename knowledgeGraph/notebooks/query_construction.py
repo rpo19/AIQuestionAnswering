@@ -449,20 +449,48 @@ WHERE
             logging.error(f"Exception {e} on query:\n\n{query}")
             raise e
 
-        def results_generator(res):
-            # for sub,pred,obj,label,given in res:
+        # def results_generator(res):
+        #     # for sub,pred,obj,label,given in res:
+        #     for pred, label, given, entity in res:
+        #         yield {
+        #             # "sub": sub.n3(),
+        #             "pred": pred.n3(),
+        #             # "obj": obj.n3(),
+        #             "label": label.value.replace('-', ' ').lower()
+        #                 if label else self.__parse_predicate(pred),
+        #             "given": given.value,
+        #             "entity": entity.n3()
+        #             }
+        def generate_results(res):
+            triples = pd.DataFrame(columns=['pred', 'label', 'given', 'entity'])
             for pred, label, given, entity in res:
-                yield {
-                    # "sub": sub.n3(),
-                    "pred": pred.n3(),
-                    # "obj": obj.n3(),
-                    "label": label.value.replace('-', ' ').lower()
-                        if label else self.__parse_predicate(pred),
-                    "given": given.value,
-                    "entity": entity.n3()
-                    }
 
-        triples=pd.DataFrame(results_generator(results))
+                if label:
+                    label = label.value.replace('-', ' ').lower()
+                else:
+                    label = self.__parse_predicate(pred.value)
+
+                tmp = triples[triples.label == label]
+                    
+                
+                if len(tmp) > 1:
+                    raise Exception("There should be only 1 duplicate.") 
+                
+                triple = {
+                            "pred": pred.n3(),
+                            "label": label,
+                            "given": given.value,
+                            "entity": entity.n3()
+                         }
+                if tmp.empty:  
+                    triples = triples.append(triple, ignore_index=True)
+                else:
+                    if "http://dbpedia.org/ontology/" in pred.value:
+                        triples.iloc[tmp.index.values[0]] = triple
+                    
+            return triples
+
+        triples = generate_results(results)
 
         return triples
 
