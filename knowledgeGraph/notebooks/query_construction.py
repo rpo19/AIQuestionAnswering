@@ -26,6 +26,7 @@ from scipy import spatial
 import generateQuery
 import itertools
 import time
+import logging
 
 
 class QueryGraphBuilder():
@@ -146,10 +147,13 @@ WHERE
 }}
 """
 
+        logging.debug("Candidates query:")
+        logging.debug(query)
+
         try:
             results=sparql.query(endpoint, query)
         except Exception as e:
-            print(f"Exception {e} on query:\n\n{query}")
+            logging.error(f"Exception {e} on query:\n\n{query}")
             raise e
 
         result_list=[]
@@ -166,7 +170,7 @@ WHERE
         start = time.time()
         ret = function(*args)
         elapsed = time.time() - start
-        print(f"{desc} Elapsed time: {elapsed}") 
+        logging.debug(f"{desc} Elapsed time: {elapsed}") 
         return ret
 
     """
@@ -267,6 +271,10 @@ WHERE
     :return: query graph
     """
     def build(self, question, entities, pattern):
+        logging.debug("Building graph...")
+        logging.debug(f"question: {question}")
+        logging.debug(f"entities: {entities}")
+        logging.debug(f"pattern: {pattern}")
 
         question, cn, Q, NS=self.pre_build(question, entities, pattern)
 
@@ -278,10 +286,13 @@ WHERE
     def ask_step(self, question, Q, endpoint='http://dbpedia.org/sparql'):
         query=generateQuery.generateQuery(question, Q)
 
+        logging.debug("Ask query:")
+        logging.debug(query)
+
         try:
             results=sparql.query(endpoint, query)
         except Exception as e:
-            print(f"Exception {e} on query:\n\n{query}")
+            logging.error(f"Exception {e} on query:\n\n{query}")
             raise e
 
         return pd.DataFrame([[item.n3() for item in row] for row in results])
@@ -330,6 +341,10 @@ WHERE
 
         if not NS:
             raise Exception("NS should not be empty!")
+
+        logging.debug("Getting relations starting from:")
+        logging.debug(f"NS: {len(NS)}")
+        logging.debug(f"cn: {len(cn)}")
 
         # computationals: |NS| * |cn|
 
@@ -417,10 +432,13 @@ WHERE
 }}
 """
 
+        logging.debug("Relations query:")
+        logging.debug(query)
+
         try:
             results=sparql.query(endpoint, query)
         except Exception as e:
-            print(f"Exception {e} on query:\n\n{query}")
+            logging.error(f"Exception {e} on query:\n\n{query}")
             raise e
 
         def results_generator(res):
@@ -510,12 +528,16 @@ if __name__ == "__main__":
 
     import time
     import pickle
+
+    logging.basicConfig()
+    logging.getLogger().setLevel(logging.DEBUG)
+
     start=time.time()
     embeddings=pickle.load(
         open('../../data/glove.twitter.27B.200d.pickle', 'rb'))
     stop=time.time()
     n=stop - start
-    print(f"Loaded embeddings in {n} seconds.")
+    logging.debug(f"Loaded embeddings in {n} seconds.")
 
     query_builder=QueryGraphBuilder(
         embeddings=embeddings, bert_similarity=False)
