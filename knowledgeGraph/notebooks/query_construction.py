@@ -25,6 +25,7 @@ from nltk.corpus import stopwords
 from scipy import spatial
 import generateQuery
 import itertools
+import time
 
 
 class QueryGraphBuilder():
@@ -161,6 +162,13 @@ WHERE
 
         return result_list[:self.entities_cap]
 
+    def __get_time(self, desc, function, args):
+        start = time.time()
+        ret = function(*args)
+        elapsed = time.time() - start
+        print(f"{desc} Elapsed time: {elapsed}") 
+        return ret
+
     """
     Build query graph by a single step.
 
@@ -173,7 +181,7 @@ WHERE
     """
     def build_step(self, question, cn, Q, NS, entities):
         # get relations connected to cn
-        R=self.__get_relations(Q, NS, cn)
+        R = self.__get_time("Get relations", self.__get_relations, (Q, NS, cn))
 
         if R is None:
             # leaf node
@@ -199,7 +207,7 @@ WHERE
 
             return Q, NS, cn
 
-        r=self.__get_most_relevant_relation(question, R)
+        r=self.__get_time("Get most relevant", self.__get_most_relevant_relation, (question, R))
 
         # get an unlabelled node in NS which has a relation respecting r direction
         unlabeled_node=r["given"]
@@ -230,7 +238,7 @@ WHERE
         # get adjacent unexplored node
         NS=self.__get_adjacent_unexplored(Q)
         # get entities corresponding to NS
-        cn=self.__get_candidate_entities(Q, NS, entities)
+        cn=self.__get_time("Get candidates", self.__get_candidate_entities, (Q, NS, entities))
 
         return Q, NS, cn
 
