@@ -347,6 +347,8 @@ WHERE
 
             return "?"+sub.lower()+obj.lower()
 
+        exclusions_string=",\n                ".join(self.exclusions_list)
+
         def triples_generator():
             for permutation in set(itertools.product(NS, cn)):
 
@@ -373,6 +375,20 @@ WHERE
         VALUES (?{permutation[0].lower()} ?given ?entity) {{
             ({permutation[1]} "{permutation[0]}" {permutation[1]})
         }} .
+        FILTER (
+            lang (?pred_label) = 'en'
+        ) .
+        OPTIONAL {{
+            ?pred rdfs:label ?pred_label .
+            BIND (
+                STR(?pred_label) AS ?pred_label_stripped
+            ) .
+        }} .
+        FILTER (
+            ?pred NOT IN (
+                {exclusions_string}
+            )
+        ) .
                 """
                 yield body
 
@@ -382,9 +398,6 @@ WHERE
     {
         """.join(list(triples_generator()))
 
-        exclusions_string=",\n                ".join(self.exclusions_list)
-
-
         query=f"""
 SELECT DISTINCT ?pred ?pred_label ?given ?entity
 WHERE
@@ -392,20 +405,6 @@ WHERE
     {{
         {body}
     }}
-    FILTER (
-        lang (?pred_label) = 'en'
-    ) .
-    OPTIONAL {{
-        ?pred rdfs:label ?pred_label .
-        BIND (
-            STR(?pred_label) AS ?pred_label_stripped
-        ) .
-    }} .
-    FILTER (
-        ?pred NOT IN (
-            {exclusions_string}
-        )
-    ) .
 }}
 """
 
