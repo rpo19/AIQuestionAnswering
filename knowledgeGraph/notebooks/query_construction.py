@@ -24,9 +24,11 @@ from Levenshtein import distance as levenshtein_distance
 from nltk.corpus import stopwords
 from scipy import spatial
 import generateQuery
+import itertools
+
 
 class QueryGraphBuilder():
-    def __init__(self, embeddings = None, bert_similarity = True, entities_cap = 25):
+    def __init__(self, embeddings=None, bert_similarity=True, entities_cap=25):
         self.entities_cap = entities_cap
         if bert_similarity:
             self.vectorizer = Vectorizer()
@@ -92,36 +94,30 @@ class QueryGraphBuilder():
                 'D': ['B']}
         }
 
-    def __get_unlabeled_node(self, graph_pattern, NS, given):
-        # if given = sub we need a sub and viceversa
-        return next((node for node in NS
-                    # if unlabeled
-                    if not graph_pattern.nodes[node]
-                    # if we want an sub we need out degree
-                    and ((given == "sub" and graph_pattern.out_degree(node) > 0)
-                        # if we want a obj we need in degree
-                        or (given == "obj" and graph_pattern.in_degree(node) > 0))),
-                None)
-    
-    def __get_unlabeled_edge(self, graph_pattern, node, given):
-        edges = graph_pattern.out_edges(node, data=True) if given == "sub" else graph_pattern.in_edges(node, data=True)
-        return next(((edge[0], edge[1]) for edge in edges if not edge[2]), None)
+    def __get_unlabeled_edge(self, graph_pattern, node):
+        return next(
+                (edge[0:2] for edge in itertools.chain(
+                    graph_pattern.in_edges(node, data=True),
+                    graph_pattern.out_edges(node, data=True))
+                    if not edge[2]
+                ),
+            None)
 
     def __get_adjacent_unexplored(self, Q):
         # get only one
-        neighbors = set()
+        neighbors=set()
         for node in Q.nodes:
             if Q.nodes[node]:
                 for neighbor in nx.all_neighbors(Q, node):
                     if not Q.nodes[neighbor]:
                         return [neighbor]
         return []
-    
-    def __get_candidate_entities(self, Q, NS, entities, endpoint = 'http://dbpedia.org/sparql'):
+
+    def __get_candidate_entities(self, Q, NS, entities, endpoint='http://dbpedia.org/sparql'):
         if not NS:
             return []
         def get_node_label(node, NS):
-            found = Q.nodes[node]
+            found=Q.nodes[node]
             if found:
                 return found["label"]
             else:
@@ -130,11 +126,18 @@ class QueryGraphBuilder():
                 else:
                     return "?"+node.lower()
 
-        current_triples = [(get_node_label(sub, NS),pred["label"],get_node_label(obj, NS))
-                                for sub,obj,pred in Q.edges(data=True) if "label" in pred]
+        def get_pred_label(pred, sub, obj):
+            return "?"+sub.lower()+obj.lower()
 
-        body = "    \n".join([f"{sub} {pred} {obj} ." for sub,pred,obj in current_triples])
-        query = f"""
+        current_triples=[(get_node_label(sub, NS), pred["label"], get_node_label(obj, NS))
+                                for sub, obj, pred in Q.edges(data=True) if "label" in pred]
+
+        current_triples.extend([(get_node_label(sub, NS), get_pred_label(pred, sub, obj), get_node_label(obj, NS))
+                        for sub, obj, pred in Q.edges(data=True) if "label" not in pred])
+
+        body="\n    ".join(
+            [f"{sub} {pred} {obj} ." for sub, pred, obj in current_triples])
+        query=f"""
 SELECT DISTINCT ?var
 WHERE
 {{
@@ -143,21 +146,21 @@ WHERE
 """
 
         try:
-            results = sparql.query(endpoint, query)
+            results=sparql.query(endpoint, query)
         except Exception as e:
             print(f"Exception {e} on query:\n\n{query}")
             raise e
 
-        result_list = []
+        result_list=[]
         for var in results:
-            n3 = var[0].n3()
+            n3=var[0].n3()
             if n3 in entities:
                 result_list.insert(0, n3)
             else:
                 result_list.append(n3)
 
         return result_list[:self.entities_cap]
-    
+
     """
     Build query graph by a single step.
 
@@ -170,7 +173,7 @@ WHERE
     """
     def build_step(self, question, cn, Q, NS, entities):
         # get relations connected to cn
-        R = self.__get_relations(Q, NS, cn)
+        R=self.__get_relations(Q, NS, cn)
 
         if R is None:
             # leaf node
@@ -179,71 +182,69 @@ WHERE
                     NS should contain only one element.
                     NS: {NS}
                     """)
-            unlabeled_node = NS[0]
+            unlabeled_node=NS[0]
             if cn in entities:
-                Q.nodes[unlabeled_node]['label'] = cn
+                Q.nodes[unlabeled_node]['label']=cn
                 entities.remove(cn)
             elif self.var_num > 0:
                 # variable
-                Q.nodes[unlabeled_node]['label'] = '?' + str(self.var_num)
+                Q.nodes[unlabeled_node]['label']='?' + str(self.var_num)
             else:
                 raise Exception("Cannot find first entity")
 
             # get adjacent unexplored node
-            NS = self.__get_adjacent_unexplored(Q)
+            NS=self.__get_adjacent_unexplored(Q)
             # get entities corresponding to NS
-            cn = self.__get_candidate_entities(Q, NS, entities)
+            cn=self.__get_candidate_entities(Q, NS, entities)
 
             return Q, NS, cn
 
-        r = self.__get_most_relevant_relation(question, R)
+        r=self.__get_most_relevant_relation(question, R)
 
         # get an unlabelled node in NS which has a relation respecting r direction
-        unlabeled_node = self.__get_unlabeled_node(Q, NS, r["given"])
-        if unlabeled_node is None:
-            return Q, [], []
+        unlabeled_node=r["given"]
 
         # first time has to be entity
         if r["entity"] in entities:
             # entity found
-            Q.nodes[unlabeled_node]['label'] = r["entity"]
+            Q.nodes[unlabeled_node]['label']=r["entity"]
             entities.remove(r["entity"])
         elif self.var_num > 0:
             # variable
-            Q.nodes[unlabeled_node]['label'] = '?' + str(self.var_num)
+            Q.nodes[unlabeled_node]['label']='?' + str(self.var_num)
         else:
             raise Exception("Cannot find first entity")
 
         # get unlabeled edge from unlabeled_node
-        unlabeled_edge = self.__get_unlabeled_edge(Q, unlabeled_node, r["given"])
+        unlabeled_edge=self.__get_unlabeled_edge(Q, unlabeled_node)
         if unlabeled_edge is None:
             return Q, [], []
 
         # assemble relation in Q
-        Q[unlabeled_edge[0]][unlabeled_edge[1]]['label'] = r["pred"]
+        Q[unlabeled_edge[0]][unlabeled_edge[1]]['label']=r["pred"]
         # for drawing purposes
-        Q[unlabeled_edge[0]][unlabeled_edge[1]]['short_label'] = r["label"]
+        Q[unlabeled_edge[0]][unlabeled_edge[1]]['short_label']=r["label"]
 
         self.var_num += 1
 
         # get adjacent unexplored node
-        NS = self.__get_adjacent_unexplored(Q)
+        NS=self.__get_adjacent_unexplored(Q)
         # get entities corresponding to NS
-        cn = self.__get_candidate_entities(Q, NS, entities)
+        cn=self.__get_candidate_entities(Q, NS, entities)
 
         return Q, NS, cn
 
     def pre_build(self, question, entities, pattern):
         # TODO: higher score linking
-        cn = [entities[0]]
+        cn=[entities[0]]
         # get pattern graph
-        p = self.__get_pattern(pattern)
+        p=self.__get_pattern(pattern)
         # make a copy of the pattern
-        Q = p.copy()
+        Q=p.copy()
         # get non-intermediate nodes
-        NS = self.__get_non_intermediate_nodes(p)
+        NS=self.__get_non_intermediate_nodes(p)
 
-        self.var_num = 0
+        self.var_num=0
 
         return question, cn, Q, NS
 
@@ -258,26 +259,26 @@ WHERE
     """
     def build(self, question, entities, pattern):
 
-        question, cn, Q, NS = self.pre_build(question, entities, pattern)
+        question, cn, Q, NS=self.pre_build(question, entities, pattern)
 
         while NS:
-            Q, NS, cn = self.build_step(question, cn, Q, NS, entities)
+            Q, NS, cn=self.build_step(question, cn, Q, NS, entities)
 
         return Q
 
-    def ask_step(self, question, Q, endpoint = 'http://dbpedia.org/sparql'):
-        query = generateQuery.generateQuery(question, Q)
+    def ask_step(self, question, Q, endpoint='http://dbpedia.org/sparql'):
+        query=generateQuery.generateQuery(question, Q)
 
         try:
-            results = sparql.query(endpoint, query)
+            results=sparql.query(endpoint, query)
         except Exception as e:
             print(f"Exception {e} on query:\n\n{query}")
             raise e
 
         return pd.DataFrame([[item.n3() for item in row] for row in results])
 
-    def ask(self, question, entities, pattern, endpoint = 'http://dbpedia.org/sparql'):
-        Q = self.build(question, entities, pattern)
+    def ask(self, question, entities, pattern, endpoint='http://dbpedia.org/sparql'):
+        Q=self.build(question, entities, pattern)
 
         return self.ask_step(question, Q, endpoint)
 
@@ -311,76 +312,112 @@ WHERE
 
     :return: dataframe of outgoing/incoming relations (URI, label)
     """
-    def __get_relations(self, Q, NS, cn, endpoint = 'http://dbpedia.org/sparql'):
-        entities_given = []
-        # unlabeled outgoing edges
-        outgoing = any(Q.out_degree(node) > 0 and not edge[2] for node in NS for edge in Q.out_edges(node, data=True))
-        if outgoing:
-            # appending entities given as subject
-            entities_given += [(e, 'sub') for e in cn]
+    def __get_relations(self, Q, NS, cn, endpoint='http://dbpedia.org/sparql'):
 
-        # unlabeled ingoing edges
-        ingoing = any(Q.in_degree(node) > 0 and not edge[2] for node in NS for edge in Q.in_edges(node, data=True))
-        if ingoing:
-            # appending entities given as subject
-            entities_given += [(e, 'obj') for e in cn]
+        # i dont care about ingoing and outgoing as super query is already super
 
-        if not entities_given:
+        if not cn:
             return None
 
-        allow_literal = all(Q.out_degree(out_edge[1]) == 0
-                                for node in NS
-                                    for out_edge in Q.out_edges(node))
-        if not allow_literal:
-            filter_literal = """FILTER (
-            !isLiteral(?obj)
-        ) ."""
-        else:
-            filter_literal = ''
+        if not NS:
+            raise Exception("NS should not be empty!")
 
-        exclusions_string = ",\n                ".join(self.exclusions_list)
-        body = """
-UNION
-""".join([f"""    {{
-        ?sub ?pred ?obj .
-        VALUES (?{given} ?given ?entity) {{
-            ({entity} "{given}" {entity})
-        }} .
-        FILTER (
-            lang (?pred_label) = 'en'
-        ) .
-        OPTIONAL {{
-            ?pred rdfs:label ?pred_label .
-            BIND (
-                STR(?pred_label) AS ?pred_label_stripped
-            ) .
-        }} .
-        FILTER (
-            ?pred NOT IN (
-                {exclusions_string}
-            )
-        ) .
-        {filter_literal}
-    }}""" for entity, given in entities_given])
+        # computationals: |NS| * |cn|
 
-        query = f"""
-SELECT DISTINCT
-    # ?sub ?pred ?obj ?pred_label_stripped ?given
-    ?pred ?pred_label_stripped ?given ?entity
+        # get the label of ns given permutation
+        def get_node_label(node, NS, permutation, Q):
+            found=Q.nodes[node]
+            # already labeled (not in ns) # check it?
+            if found:
+                return found["label"]
+
+            # if node in NS:
+            #     index = NS.index(node)
+            #     entity = permutation[index]
+
+            #     if entity:
+            #         return entity
+
+            # if not in NS or entity is None
+            return "?"+node.lower()
+
+        def get_pred_label(pred, sub, obj, NS, permutation, Q):
+            if sub == permutation[0] or obj == permutation[0]:
+                return "?pred"
+
+            return "?"+sub.lower()+obj.lower()
+
+        def triples_generator():
+            for permutation in set(itertools.product(NS, cn)):
+
+                current_triples=[
+                        (
+                            get_node_label(sub, NS, permutation, Q),
+                            pred["label"],
+                            get_node_label(obj, NS, permutation, Q)
+                        ) for sub, obj, pred in Q.edges(data=True) if "label" in pred
+                    ]
+
+                current_triples.extend([
+                        (
+                            get_node_label(sub, NS, permutation, Q),
+                            get_pred_label(pred, sub, obj, NS, permutation, Q),
+                            get_node_label(obj, NS, permutation, Q)
+                        ) for sub, obj, pred in Q.edges(data=True) if "label" not in pred
+                    ])
+
+                body="\n        ".join(
+                    [f"{sub} {pred} {obj} ." for sub, pred, obj in current_triples])
+
+                body += f"""
+        VALUES (?{permutation[0].lower()} ?given ?entity) {{
+            ({permutation[1]} "{permutation[0]}" {permutation[1]})
+        }} .
+                """
+                yield body
+
+        body="""
+    }
+    UNION
+    {
+        """.join(list(triples_generator()))
+
+        exclusions_string=",\n                ".join(self.exclusions_list)
+
+
+        query=f"""
+SELECT DISTINCT ?pred ?pred_label ?given ?entity
 WHERE
 {{
-{body}
+    {{
+        {body}
+    }}
+    FILTER (
+        lang (?pred_label) = 'en'
+    ) .
+    OPTIONAL {{
+        ?pred rdfs:label ?pred_label .
+        BIND (
+            STR(?pred_label) AS ?pred_label_stripped
+        ) .
+    }} .
+    FILTER (
+        ?pred NOT IN (
+            {exclusions_string}
+        )
+    ) .
 }}
 """
+
         try:
-            results = sparql.query(endpoint, query)
+            results=sparql.query(endpoint, query)
         except Exception as e:
             print(f"Exception {e} on query:\n\n{query}")
             raise e
 
-        def generator(res):
+        def results_generator(res):
             # for sub,pred,obj,label,given in res:
-            for pred,label,given,entity in res:
+            for pred, label, given, entity in res:
                 yield {
                     # "sub": sub.n3(),
                     "pred": pred.n3(),
@@ -391,9 +428,10 @@ WHERE
                     "entity": entity.n3()
                     }
 
-        triples = pd.DataFrame(generator(results))
+        triples=pd.DataFrame(results_generator(results))
 
         return triples
+
 
     """
     Parse URI to extract a label.
@@ -403,8 +441,8 @@ WHERE
     :return: predicate label
     """
     def __parse_predicate(self, pred):
-        last = pred.rsplit('/',1)[1]
-        splitted = re.findall(r'[A-Z]?[a-z]+|[A-Z]+(?=[A-Z]|$)', last)
+        last=pred.rsplit('/', 1)[1]
+        splitted=re.findall(r'[A-Z]?[a-z]+|[A-Z]+(?=[A-Z]|$)', last)
         return ' '.join(splitted)
 
     """
@@ -417,41 +455,45 @@ WHERE
     :return: label of most relevant relation
     """
     def __get_most_relevant_relation(self, question, R, lambda_param=0.5):
-        unique_relations = R
-        question = question.lower().replace('?', ' ?')
+        unique_relations=R
+        question=question.lower().replace('?', ' ?')
         # tokenize question
-        question_tokens = question.split()
+        question_tokens=question.split()
         # remove stopwords and punctuation tokens
-        question_tokens = [token for token in question_tokens
+        question_tokens=[token for token in question_tokens
                                if token not in self.stops and token not in string.punctuation]
 
-        relevances = []
+        relevances=[]
 
         for index, row in unique_relations.iterrows():
             # tokenize label
-            relation_tokens = row['label'].split()
+            relation_tokens=row['label'].split()
 
-            relevance = 0
+            relevance=0
             for rel_token in relation_tokens:
 
                 for question_token in question_tokens:
 
                     if rel_token in self.embeddings and question_token in self.embeddings:
 
-                        rel_token_embedding = self.embeddings[rel_token]
-                        question_token_embedding = self.embeddings[question_token]
+                        rel_token_embedding=self.embeddings[rel_token]
+                        question_token_embedding=self.embeddings[question_token]
 
                         # compute cosine similarity
-                        cos_sim = 1 - spatial.distance.cosine(rel_token_embedding, question_token_embedding)
+                        cos_sim=1 - \
+                            spatial.distance.cosine(
+                                rel_token_embedding, question_token_embedding)
                     else:
-                        cos_sim = 0
+                        cos_sim=0
                     # compute lev distance
-                    lev_distance = levenshtein_distance(question_token, rel_token)
+                    lev_distance=levenshtein_distance(
+                        question_token, rel_token)
                     # sum to previous relenvances of relation tokens and question tokens
-                    relevance += lambda_param * cos_sim + (1 - lambda_param) * 1/(lev_distance+1)
+                    relevance += lambda_param * cos_sim + \
+                        (1 - lambda_param) * 1/(lev_distance+1)
 
             relevances.append(relevance/len(relation_tokens))
-        relevances = np.array(relevances)
+        relevances=np.array(relevances)
 
         return unique_relations.iloc[np.argmax(relevances)]
 
@@ -460,15 +502,17 @@ if __name__ == "__main__":
 
     import time
     import pickle
-    start = time.time()
-    embeddings = pickle.load(open('../../data/glove.twitter.27B.200d.pickle', 'rb'))
-    stop = time.time()
-    n = stop - start
+    start=time.time()
+    embeddings=pickle.load(
+        open('../../data/glove.twitter.27B.200d.pickle', 'rb'))
+    stop=time.time()
+    n=stop - start
     print(f"Loaded embeddings in {n} seconds.")
 
-    query_builder = QueryGraphBuilder(embeddings = embeddings, bert_similarity = False)
+    query_builder=QueryGraphBuilder(
+        embeddings=embeddings, bert_similarity=False)
 
-    res = query_builder.ask(question='What university campuses are situated in Indiana?',
+    res=query_builder.ask(question='What university campuses are situated in Indiana?',
                             entities=["<http://dbpedia.org/resource/Indiana>"],
                             pattern='p2')
 
