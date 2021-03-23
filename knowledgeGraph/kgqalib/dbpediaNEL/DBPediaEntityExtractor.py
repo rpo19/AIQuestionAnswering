@@ -16,7 +16,8 @@ class DBPediaEntityExtractor():
         nel_ents = doc.ents
         
         # filter entities
-        filtered_ents = []
+        filtered_ents_uri = []
+        filtered_ents_text = []
         for nel_ent in nel_ents:
             # if there are NER ents
             try:
@@ -31,10 +32,7 @@ class DBPediaEntityExtractor():
                         filtered_ents.append()
             except:
                 # no NER ents, keep all the dbpedia-spotlight ones
-                ent = {
-                            'id': nel_ent.kb_id_,
-                            'text': nel_ent.text
-                        }
-                filtered_ents.append(ent)
+                filtered_ents_uri.append('<'+nel_ent.kb_id_+'>')
+                filtered_ents_text.append(nel_ent.text)
         
-        return filtered_ents
+        return filtered_ents_uri, filtered_ents_text

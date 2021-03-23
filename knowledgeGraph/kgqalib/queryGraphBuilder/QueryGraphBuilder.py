@@ -1,17 +1,3 @@
-# ---
-# jupyter:
-#   jupytext:
-#     text_representation:
-#       extension: .py
-#       format_name: light
-#       format_version: '1.5'
-#       jupytext_version: 1.10.3
-#   kernelspec:
-#     display_name: Python 3
-#     language: python
-#     name: python3
-# ---
-
 import networkx as nx
 import sparql
 import pandas as pd
@@ -23,10 +9,10 @@ from numpy.linalg import norm
 from Levenshtein import distance as levenshtein_distance
 from nltk.corpus import stopwords
 from scipy import spatial
-import generateQuery
 import itertools
 import time
 import logging
+import pickle
 
 
 class QueryGraphBuilder():
@@ -36,7 +22,11 @@ class QueryGraphBuilder():
             self.vectorizer = Vectorizer()
         else:
             if embeddings is None:
-                raise Exception("Embeggins not found.")
+                try:
+                    print('Loading embeddings...')
+                    self.embeddings=pickle.load(open('../../data/glove.twitter.27B.200d.pickle', 'rb'))
+                except Exception as e:
+                    raise e
             else:
                 self.embeddings = embeddings
         self.var_num = 0
@@ -558,6 +548,7 @@ WHERE
         relevances=np.array(relevances)
 
         return unique_relations.iloc[np.argmax(relevances)]
+
 
 
 if __name__ == "__main__":
