@@ -2,6 +2,7 @@ import { trigger, transition, style, animate } from '@angular/animations';
 import { ChangeDetectionStrategy, Component, HostBinding, OnInit } from '@angular/core';
 import {FormControl, FormGroup, Validators} from '@angular/forms';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { ApiService } from 'src/app/shared/api.service';
 import { LoaderService } from 'src/app/shared/loader.service';
 import { Data } from 'src/app/shared/models/data';
@@ -16,8 +17,10 @@ export class AskerComponent implements OnInit {
 
   data$: Observable<Data>;
   loading$: Observable<boolean>;
+  abstract$: Observable<string>;
 
   firstTime = true;
+  mouseenter = false;
 
   searchForm = new FormGroup({
     question: new FormControl('')
@@ -44,6 +47,11 @@ export class AskerComponent implements OnInit {
       this.data$ = this._api.ask_kgqa(this.searchForm.value.question)
       this.firstTime = false;
     }
+  }
+
+  getAbstract(entity: string): void {
+    this.mouseenter = true;
+    this.abstract$ = this._api.getAbstract(entity)
   }
 
 }

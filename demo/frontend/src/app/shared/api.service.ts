@@ -16,4 +16,13 @@ export class ApiService {
 		return this._http.get<Data>(`${this._api}/api/kgqa?q=${question}`);
 	}
 
+
+
+
+	getAbstract(entity: string): Observable<any> {
+		const query = `SELECT DISTINCT ?obj WHERE { ${entity} dbo:abstract ?obj . FILTER(LANG(?obj) = "en") } LIMIT 1`
+	  
+		return this._http.get<any>(`http://dbpedia.org/sparql?query=${query}`).pipe(map(res => res.results.bindings[0].obj.value.split('.')[0]));
+	}
+
 }

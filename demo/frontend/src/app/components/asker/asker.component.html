@@ -1,6 +1,7 @@
 <ng-container *ngIf="{
     data: data$ | async,
-    loading: loading$ | async
+    loading: loading$ | async,
+    abstract: abstract$ | async
   } as res">
 
   <form [formGroup]="searchForm" class="tui-space_bottom-5">
@@ -16,7 +17,7 @@
     </button>
   </form>
 
-  <tui-loader *ngIf="!firstTime" [overlay]="true" [showLoader]="res.loading">
+  <tui-loader *ngIf="!firstTime" [overlay]="true" [showLoader]="res.loading && !mouseenter">
     <div class="tui-text_body-m pattern">
       <span class="tui-space_right-1">Identified pattern:</span> 
       <tui-tag *ngIf="res.data?.pattern" [value]="res.data?.pattern" size="s"></tui-tag>
@@ -31,13 +32,18 @@
           <th class="tui-table__th">N.</th>
           <th class="tui-table__th">Answer</th>
         </tr>
-        <tr *ngFor="let answer of res.data?.answers; let i = index" class="tui-table__tr">
+        <tr (mouseenter)="getAbstract(answer)" [tuiHint]="answerAbstract" tuiHintDirection="right" 
+          *ngFor="let answer of res.data?.answers; let i = index" class="tui-table__tr">
           <td class="tui-table__td">{{i+1}}</td>
           <td class="tui-table__td">{{answer}}</td>
         </tr>
       </tbody>
     </table>
   </tui-loader>
+
+<ng-template #answerAbstract>
+    {{res.abstract}}
+</ng-template>
 
 
 </ng-container>

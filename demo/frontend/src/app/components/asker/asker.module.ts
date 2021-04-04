@@ -5,6 +5,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { TuiInputModule, TuiTagModule } from '@taiga-ui/kit';
 import { TuiLoaderModule, TuiTextfieldControllerModule } from '@taiga-ui/core';
 import { TuiButtonModule } from '@taiga-ui/core';
+import { TuiHintModule } from '@taiga-ui/core';
 
 
 @NgModule({
@@ -16,7 +17,8 @@ import { TuiButtonModule } from '@taiga-ui/core';
     TuiTextfieldControllerModule,
     TuiButtonModule,
     TuiLoaderModule,
-    TuiTagModule
+    TuiTagModule,
+    TuiHintModule
   ],
   declarations: [AskerComponent],
   exports: [AskerComponent]
