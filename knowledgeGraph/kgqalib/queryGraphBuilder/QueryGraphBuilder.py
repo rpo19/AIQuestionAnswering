@@ -16,7 +16,7 @@ import pickle
 
 
 class QueryGraphBuilder():
-    def __init__(self, embeddings=None, bert_similarity=True, entities_cap=25):
+    def __init__(self, embeddings=None, path_to_embeddings='../../data/glove.twitter.27B.200d.pickle', bert_similarity=True, entities_cap=25):
         self.entities_cap = entities_cap
         if bert_similarity:
             self.vectorizer = Vectorizer()
@@ -24,7 +24,7 @@ class QueryGraphBuilder():
             if embeddings is None:
                 try:
                     print('Loading embeddings...')
-                    self.embeddings=pickle.load(open('../../data/glove.twitter.27B.200d.pickle', 'rb'))
+                    self.embeddings=pickle.load(open(path_to_embeddings, 'rb'))
                 except Exception as e:
                     raise e
             else:

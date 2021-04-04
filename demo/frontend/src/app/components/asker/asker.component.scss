@@ -1,0 +1,32 @@
+:host {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    form {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+
+        tui-input {
+            flex-grow: 1;
+            margin-right: 12px;
+        }
+    }
+
+    .pattern {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .entities {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .results {
+        display: flex;
+        flex-direction: column;
+    }
+}

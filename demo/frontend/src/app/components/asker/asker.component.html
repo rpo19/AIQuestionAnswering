@@ -1,0 +1,43 @@
+<ng-container *ngIf="{
+    data: data$ | async,
+    loading: loading$ | async
+  } as res">
+
+  <form [formGroup]="searchForm" class="tui-space_bottom-5">
+    <tui-input [tuiTextfieldLabelOutside]="true" 
+      formControlName="question" 
+      tuiTextfieldAutocomplete="off" 
+      spellcheck="false"
+      (keydown.enter)="ask()">
+      Type a question here
+    </tui-input>
+    <button (click)="ask()" tuiButton type="button" [showLoader]="res.loading" appearance="whiteblock-active">
+      Ask
+    </button>
+  </form>
+
+  <tui-loader *ngIf="!firstTime" [overlay]="true" [showLoader]="res.loading">
+    <div class="tui-text_body-m pattern">
+      <span class="tui-space_right-1">Identified pattern:</span> 
+      <tui-tag *ngIf="res.data?.pattern" [value]="res.data?.pattern" size="s"></tui-tag>
+    </div>
+    <div class="entities tui-text_body-m tui-space_bottom-5">
+      <span class="tui-space_right-1">Extracted entities:</span> 
+      <tui-tag *ngFor="let entity of res.data?.entities" class="tui-space_right-1" [value]="entity" size="s"></tui-tag>
+    </div>
+    <table class="tui-table">
+      <tbody>
+        <tr class="tui-table__tr">
+          <th class="tui-table__th">N.</th>
+          <th class="tui-table__th">Answer</th>
+        </tr>
+        <tr *ngFor="let answer of res.data?.answers; let i = index" class="tui-table__tr">
+          <td class="tui-table__td">{{i+1}}</td>
+          <td class="tui-table__td">{{answer}}</td>
+        </tr>
+      </tbody>
+    </table>
+  </tui-loader>
+
+
+</ng-container>
