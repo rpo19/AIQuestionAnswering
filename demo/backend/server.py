@@ -21,6 +21,7 @@ def ask_kgqa():
 
         # extract and link entities
         entities, texts = entity_extractor.extract(question)
+        entities_copy = entities.copy()
         print('Extracted entities:', entities)
         print('Extracted texts:', texts)
 
@@ -31,7 +32,7 @@ def ask_kgqa():
         answers_df = query_generator.generate_and_ask(question, Q)
 
         answers = answers_df['Answers'].values.tolist()
-        return { 'pattern': patterns[0], 'entities': texts, 'answers': answers }
+        return { 'pattern': patterns[0], 'entities': entities_copy, 'answers': answers }
     
     return {'error': 'Question is empty!'}
 
