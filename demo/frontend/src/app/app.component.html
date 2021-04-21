@@ -1,29 +1,35 @@
 <tui-root>
   <!-- content of your app -->
-  <div class="header">
-    <div class="tui-text_h1 tui-space_bottom-5">Question answering</div>
-    <div class="tui-text_h5 tui-space_bottom-5">AI project - Academic year 2020/2021</div>
-    <div class="description tui-text_body-xl tui-space_bottom-3">
-      This demo contains a Knowledge Graph Question answering approach 
-      and a Text Based Question answering approach developed for the 
-      course of Artificial Intelligence of the academic year 2020/2021.
+  <div @enterAnimation class="app-content">
+    <div class="header">
+      <div class="tui-text_h1 tui-space_bottom-5">Question answering</div>
+      <div class="tui-text_h5 tui-space_bottom-5">AI project - Academic year 2020/2021</div>
+      <div class="description tui-text_body-xl tui-space_bottom-3">
+        This demo contains a Knowledge Graph Question answering approach 
+        and a Text Based Question answering approach developed for the 
+        course of Artificial Intelligence of the academic year 2020/2021.
+      </div>
+  
+      <div class="tags tui-space_bottom-6">
+        <tui-tag class="tag-kg" status="custom" value="Knowledge Graph" size="m"></tui-tag>
+        <tui-tag class="tag-kg" status="custom" value="DBPedia" size="m"></tui-tag>
+        <tui-tag class="tag-bert" status="custom" value="BERT" size="m"></tui-tag>
+        <tui-tag class="tag-python" status="custom" value="Python" size="m"></tui-tag>
+        <tui-tag class="tag-ng" status="custom" value="Angular" size="m"></tui-tag>
+      </div>
+  
+      
+      <div class="description tui-text_body-m tui-space_bottom-2">
+        Authors: Christian Bernasconi - Gabriele Ferrario - Riccardo Pozzi - Marco Ripamonti
+      </div>
+
+      <div class="description tui-text_body-m tui-space_bottom-10">
+        GitLab repository: <a tuiLink href="https://gitlab.com/unizzan/master_proj_ai">https://gitlab.com/unizzan/master_proj_ai</a>
+      </div>
     </div>
 
-    <div class="tags tui-space_bottom-3">
-      <tui-tag class="tag-kg" status="custom" value="Knowledge Graph" size="m"></tui-tag>
-      <tui-tag class="tag-kg" status="custom" value="DBPedia" size="m"></tui-tag>
-      <tui-tag class="tag-bert" status="custom" value="BERT" size="m"></tui-tag>
-      <tui-tag class="tag-python" status="custom" value="Python" size="m"></tui-tag>
-      <tui-tag class="tag-ng" status="custom" value="Angular" size="m"></tui-tag>
-    </div>
-
-    
-    <div class="description tui-text_body-m tui-space_bottom-15">
-      Authors: Christian Bernasconi - Gabriele Ferrario - Riccardo Pozzi - Marco Ripamonti
-    </div>
-  </div>
-
-  <app-asker></app-asker>
+    <app-asker></app-asker>
+  </div>  
 
   <!--
    If you need, you can add something between Taiga portal layers:

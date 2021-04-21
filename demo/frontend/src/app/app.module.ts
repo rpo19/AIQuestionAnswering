@@ -2,7 +2,7 @@ import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
-import { iconsPathFactory, TuiRootModule, TUI_ICONS_PATH } from '@taiga-ui/core';
+import { iconsPathFactory, TuiDialogModule, TuiLinkModule, TuiNotificationsModule, TuiRootModule, TUI_ICONS_PATH } from '@taiga-ui/core';
 import { environment } from 'src/environments/environment';
 
 import { AppRoutingModule } from './app-routing.module';
@@ -23,7 +23,10 @@ import { HttpLoaderInterceptor } from './shared/interceptors/http-loader-interce
     TuiRootModule,
     HttpClientModule,
     AskerModule,
-    TuiTagModule
+    TuiTagModule,
+    TuiDialogModule,
+    TuiNotificationsModule,
+    TuiLinkModule
   ],
   providers: [
     { provide: TOKENAPI, useValue: environment.backendUrl },

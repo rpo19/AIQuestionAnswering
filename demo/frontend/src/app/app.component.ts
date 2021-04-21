@@ -15,11 +15,6 @@ import { Component, HostBinding, OnInit } from '@angular/core';
   ]
 })
 export class AppComponent implements OnInit {
-  title = 'frontend';
-
-  @HostBinding('@enterAnimation') get enterAnimation(): boolean {
-    return true;
-  }
 
   constructor() {}
 

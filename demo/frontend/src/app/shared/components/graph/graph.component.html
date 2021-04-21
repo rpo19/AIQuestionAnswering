@@ -1,0 +1,35 @@
+<svg class="container">
+  <g *ngFor="let nodePos of nodePositions; trackBy: trackNodes" class="node">
+    <circle @posAnimation [attr.id]="nodePos.id" [attr.cx]="nodePos.cx" [attr.cy]="nodePos.cy" [attr.r]="nodeRadius"
+      stroke="black" stroke-width="3" fill="red" />
+
+    <text text-anchor="middle" [attr.x]="nodePos.cx" [attr.y]="nodePos.cy - (nodeRadius + 10)">
+      {{nodePos.label | tuiMapper : getLabel}}
+    </text>
+  </g>
+
+
+  <g *ngFor="let edge of edgePositions; trackBy: trackEdges" class="edge">
+    <path [attr.id]="edge.id" [attr.d]="'M ' + edge.cx1 + ' ' + edge.cy1 + ' L ' + edge.cx2 + ' ' + edge.cy2"
+      [attr.marker-start]="edge.backward ? 'url(#arrowhead-backward)' : ''"
+      [attr.marker-end]="!edge.backward ? 'url(#arrowhead)' : ''" />
+
+    <text text-anchor="middle">
+      <textPath [attr.href]="'#' + edge.id" startOffset="50%">
+        {{edge.label | tuiMapper : getLabel}}
+      </textPath>
+    </text>
+
+    <g [ngSwitch]="edge.backward">
+      <marker *ngSwitchCase="true" id="arrowhead-backward" markerWidth="10" markerHeight="7" refX="10" refY="3.5"
+        orient="auto-start-reverse">
+        <polygon points="0 0, 10 3.5, 0 7" />
+      </marker>
+
+      <marker *ngSwitchCase="false" id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+        <polygon points="0 0, 10 3.5, 0 7" />
+      </marker>
+    </g>
+
+  </g>
+</svg>

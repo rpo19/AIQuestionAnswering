@@ -2,7 +2,7 @@ import { HttpEvent, HttpInterceptor, HttpHandler, HttpRequest, HttpResponse, Htt
 import { Injectable } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
 import { catchError, finalize } from 'rxjs/operators';
-import { LoaderService } from '../loader.service';
+import { LoaderService } from '../services/loader/loader.service';
 
 /**
  * Provides an interceptor to handle HTTP and client errors.

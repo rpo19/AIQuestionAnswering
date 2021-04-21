@@ -1,0 +1,3 @@
+<pre><code><table class="table"><tbody><tr *ngFor="let row of rows; let rowIndex = index"><td class="numbers">{{rowIndex + 1}}</td><td class="table-td" [ngClass]="rowIndex !== 0 && rowIndex !== rows.length - 1 ? 'indented' : ''"><span class="word" [ngClass]="operators[word]" *ngFor="let word of row.words">{{word}}</span></td></tr></tbody></table></code></pre>
+
+<button tuiButton icon="tuiIconCopy" appearance="flat" size="s" class="copy-btn" (click)="copyToClipboard()">{{(copy$ | async) ? 'Copy' : 'Copied to clipboard'}}</button>

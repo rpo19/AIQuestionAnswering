@@ -1,0 +1,60 @@
+:host {
+    display: block;
+    position: relative;
+
+    .copy-btn {
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+    }
+}
+
+pre {
+    margin: 0;
+  }
+  code {
+    display: block;
+    border-radius: 12px;
+    padding: 24px 32px;
+    background-color: var(--tui-base-02);
+    .table {
+      border-collapse: collapse;
+      border-spacing: 0;
+      white-space: pre-wrap;
+  
+      .table-td {
+        padding: 0;
+        text-align: left;
+  
+        &.indented {
+          padding-left: 20px;
+        }
+  
+        .word {
+          margin-right: 10px;
+  
+          &.word-select {
+            color: var(--tui-accent-hover);
+          }
+          &.word-distinct {
+            color: var(--tui-accent-hover);
+        }
+          &.word-where {
+              color: var(--tui-support-15);
+          }
+        }
+      }
+
+      .numbers {
+        vertical-align: top;
+        padding-right: 1em;
+        user-select: none;
+        color: var(--tui-base-04);
+        -moz-user-select: none;
+        -khtml-user-select: none;
+        -webkit-user-select: none;
+        -o-user-select: none;
+      }
+    }
+  }
+  

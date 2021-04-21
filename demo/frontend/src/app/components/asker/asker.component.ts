@@ -1,11 +1,14 @@
-import { trigger, transition, style, animate } from '@angular/animations';
-import { ChangeDetectionStrategy, Component, HostBinding, OnInit } from '@angular/core';
-import {FormControl, FormGroup, Validators} from '@angular/forms';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
-import { ApiService } from 'src/app/shared/api.service';
-import { LoaderService } from 'src/app/shared/loader.service';
-import { Data } from 'src/app/shared/models/data';
+import { ChangeDetectionStrategy, Component, Inject, OnInit } from '@angular/core';
+import { FormControl, FormGroup } from '@angular/forms';
+import { TuiDialogContext, TuiDialogService, TuiNotification, TuiNotificationsService } from '@taiga-ui/core';
+import { PolymorpheusTemplate } from '@tinkoff/ng-polymorpheus';
+import { Observable, of } from 'rxjs';
+import { ApiService } from 'src/app/shared/services/api/api.service';
+import { LoaderService } from 'src/app/shared/services/loader/loader.service';
+import { DataKGQA } from 'src/app/shared/models/data';
+import { catchError, debounceTime, distinctUntilChanged, filter, map, startWith, switchMapTo, tap } from 'rxjs/operators';
+import { QuestionStoreService } from 'src/app/shared/services/local-storage/question-store.service';
+import { HttpErrorResponse } from '@angular/common/http';
 
 @Component({
   selector: 'app-asker',
@@ -15,43 +18,123 @@ import { Data } from 'src/app/shared/models/data';
 })
 export class AskerComponent implements OnInit {
 
-  data$: Observable<Data>;
+  // emits responses from kgqa
+  dataKGQA$: Observable<DataKGQA | void>;
+  // emit loading status on request
   loading$: Observable<boolean>;
-  abstract$: Observable<string>;
+  // emit previous questions stored in the local storage
+  previousQuestions$: Observable<string[]>;
 
   firstTime = true;
-  mouseenter = false;
 
+  // keeps track of dropdown status
+  openDropdown = false;
+  // search form
   searchForm = new FormGroup({
-    question: new FormControl('')
+    question: new FormControl(''),
+    type: new FormControl('kgqa')
   });
 
-  get question(): FormControl {
-    return this.searchForm.get('question') as FormControl;
-  }
 
   constructor(
     private readonly _api: ApiService,
-    private readonly _loader: LoaderService
+    private readonly _loader: LoaderService,
+    private readonly _questionStoreService: QuestionStoreService,
+    @Inject(TuiNotificationsService) private readonly _notificationsService: TuiNotificationsService,
+    @Inject(TuiDialogService) private readonly dialogService: TuiDialogService
   ) { }
 
   ngOnInit() {
     this.loading$ = this._loader.loading$;
 
-    this._loader.loading$.subscribe(res => console.log(res));
+    this.previousQuestions$ = this.question.valueChanges.pipe(
+      debounceTime(200),
+      distinctUntilChanged(),
+      switchMapTo(this._questionStoreService.get('questions')),
+      filter(questions => questions),
+      map((questions: string[]) => {
+        const foundQ = this._filterQuestions(questions);
+        return !foundQ || foundQ.length === 0 ? [] : foundQ
+      }),
+      startWith([]),
+      tap((questions) => this._shouldCloseDropdown(questions) ? this.openDropdown = false : this.openDropdown = true)
+    )
   }
 
-  ask(): void {
-    const question = this.question.value;
+  private _filterQuestions(questions: string[]): string[] {
+    const val = this.question.value.toLowerCase()
+    return questions.filter(question => question.toLowerCase().includes(val)).slice(0, 5);
+  }
+
+  private _shouldCloseDropdown(questions: string[]): boolean {
+    return questions.length === 0 || questions.length === 1 &&
+      questions[0].toLowerCase() === this.question.value.toLowerCase();
+  }
+
+  /**
+  * Getter question form control
+  */
+  get question(): FormControl {
+    return this.searchForm.get('question') as FormControl;
+  }
+
+  /**
+  * Getter type form control
+  */
+  get type(): FormControl {
+    return this.searchForm.get('type') as FormControl;
+  }
+
+  /**
+   * Handle ask
+   */
+  handleAsk(question: string): void {
     if (question) {
-      this.data$ = this._api.ask_kgqa(this.searchForm.value.question)
+      if (this.type.value === 'kgqa') {
+        this.dataKGQA$ = this._api.ask_kgqa(this.searchForm.value.question).pipe(
+          catchError((err: HttpErrorResponse) => {
+            return this._notificationsService.show(err.error.error, { status: TuiNotification.Error })
+          }),
+          tap(() => this._questionStoreService.set('questions', this.question.value))
+        );
+      } else {
+        // retrieve answer for ftqa
+        this.dataKGQA$ = of(null);
+      }
       this.firstTime = false;
     }
   }
 
-  getAbstract(entity: string): void {
-    this.mouseenter = true;
-    this.abstract$ = this._api.getAbstract(entity)
+  /**
+   * Ask on form submit
+   */
+  ask(): void {
+    const question = this.question.value;
+    this.handleAsk(question);
+  }
+
+  /**
+   * Opens SPARQL query dialog
+   */
+  openDialog(content: PolymorpheusTemplate<TuiDialogContext>): void {
+    this.dialogService.open(content, { size: 'l' }).subscribe();
+  }
+
+  /**
+   * Set question selected from dropdown
+   */
+  setQuestion(prevQuestion: string) {
+    this.searchForm.patchValue({
+      question: prevQuestion
+    })
+    this.openDropdown = false;
+  }
+
+  /**
+   * Get a link from a resource
+   */
+  getLink(resource: string): string {
+    return resource.split('<')[1].split('>')[0];
   }
 
 }

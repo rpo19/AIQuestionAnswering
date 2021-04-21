@@ -1,49 +1,110 @@
 <ng-container *ngIf="{
-    data: data$ | async,
-    loading: loading$ | async,
-    abstract: abstract$ | async
+    dataKGQA: dataKGQA$ | async,
+    loading: loading$ | async
   } as res">
 
-  <form [formGroup]="searchForm" class="tui-space_bottom-5">
-    <tui-input [tuiTextfieldLabelOutside]="true" 
-      formControlName="question" 
-      tuiTextfieldAutocomplete="off" 
-      spellcheck="false"
-      (keydown.enter)="ask()">
-      Type a question here
-    </tui-input>
-    <button (click)="ask()" tuiButton type="button" [showLoader]="res.loading" appearance="whiteblock-active">
-      Ask
-    </button>
+  <!-- SEARCH BAR -->
+  <form *ngIf="previousQuestions$ | async as previousQuestions" [formGroup]="searchForm" class="tui-space_bottom-5">
+    <div tuiGroup [collapsed]="true" class="radio-buttons tui-space_bottom-3">
+      <tui-radio-block contentAlign="right" formControlName="type" item="kgqa" size="s">
+        Knowledge base question answering
+      </tui-radio-block>
+      <tui-radio-block contentAlign="right" formControlName="type" item="ftqa" size="s">
+        Free text question answering 
+      </tui-radio-block>
+    </div>
+
+    <div class="search">
+      <tui-hosted-dropdown [content]="dropdown" [(open)]="openDropdown" tuiDropdownLimitWidth="fixed">
+        <tui-input [tuiTextfieldLabelOutside]="true" formControlName="question" tuiTextfieldAutocomplete="off"
+          spellcheck="false" (keydown.enter)="ask()">
+          Type a question here
+        </tui-input>
+      </tui-hosted-dropdown>
+
+      <ng-template #dropdown>
+        <tui-data-list class="previous-questions">
+          <button class="prev-question" *ngFor="let prevQuestion of previousQuestions" tuiOption
+            (click)="setQuestion(prevQuestion)">
+            <tui-svg src="tuiIconTime"></tui-svg>
+            {{prevQuestion}}
+          </button>
+        </tui-data-list>
+      </ng-template>
+
+      <button (click)="ask()" tuiButton type="button" [showLoader]="res.loading" appearance="whiteblock-active">
+        Ask
+      </button>
+    </div>
+
   </form>
 
-  <tui-loader *ngIf="!firstTime" [overlay]="true" [showLoader]="res.loading && !mouseenter">
-    <div class="tui-text_body-m pattern">
-      <span class="tui-space_right-1">Identified pattern:</span> 
-      <tui-tag *ngIf="res.data?.pattern" [value]="res.data?.pattern" size="s"></tui-tag>
-    </div>
-    <div class="entities tui-text_body-m tui-space_bottom-5">
-      <span class="tui-space_right-1">Extracted entities:</span> 
-      <tui-tag *ngFor="let entity of res.data?.entities" class="tui-space_right-1" [value]="entity" size="s"></tui-tag>
-    </div>
-    <table class="tui-table">
-      <tbody>
-        <tr class="tui-table__tr">
-          <th class="tui-table__th">N.</th>
-          <th class="tui-table__th">Answer</th>
-        </tr>
-        <tr (mouseenter)="getAbstract(answer)" [tuiHint]="answerAbstract" tuiHintDirection="right" 
-          *ngFor="let answer of res.data?.answers; let i = index" class="tui-table__tr">
-          <td class="tui-table__td">{{i+1}}</td>
-          <td class="tui-table__td">{{answer}}</td>
-        </tr>
-      </tbody>
-    </table>
-  </tui-loader>
+  <!-- ANSWERS -->
+  <div class="wrapper">
+    <tui-loader *ngIf="!firstTime" [overlay]="true" [showLoader]="res.loading && !mouseenter">
+      <!-- GRAPH -->
+      <ng-container *ngIf="res.dataKGQA">
+        <div *ngIf="type.value === 'kgqa'" class="container">
+          <tui-tag [value]="'Classified pattern:' + res.dataKGQA.pattern" size="s"></tui-tag>
+          <button class="btn-code" tuiButton appearance="flat" icon="tuiIconCode" size="s"
+            (click)="openDialog(dialogTemplate)">
+            SPARQL
+          </button>
 
-<ng-template #answerAbstract>
-    {{res.abstract}}
-</ng-template>
+          <ng-template #dialogTemplate="polymorpheus" polymorpheus let-observer>
+            <div class="tui-text_h6 tui-space_bottom-3">Generated SPARQL query</div>
+            <div class="tui-text_body-l tui-space_bottom-3">From the generated graph we can build a SPARQL query to
+              retrieve
+              the answers to the orginal question.</div>
+            <app-code-markup [content]="res.dataKGQA.query"></app-code-markup>
+          </ng-template>
+
+          <app-graph [graph]="res.dataKGQA.graph"></app-graph>
+        </div>
+
+        <!-- ANSWSERS TABLE -->
+        <table *ngIf="type.value === 'kgqa'; else ftqa" class="tui-table">
+          <tbody>
+            <tr class="tui-table__tr">
+              <th class="tui-table__th">N.</th>
+              <th class="tui-table__th">Answer</th>
+            </tr>
+            <tr *ngFor="let answer of res.dataKGQA?.answers; let i = index" class="tui-table__tr">
+              <td class="tui-table__td">{{i+1}}</td>
+              <td class="tui-table__td">
+                <a *ngIf="answer.startsWith('&lt;http'); else literal" target="_blank"
+                  [href]="answer | tuiMapper: getLink" tuiLink>{{answer}}</a>
+                <ng-template #literal>
+                  {{answer}}
+                </ng-template>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <ng-template #ftqa>
+<!--           <table class="tui-table">
+            <tbody>
+              <tr class="tui-table__tr">
+                <th class="tui-table__th">N.</th>
+                <th class="tui-table__th">Answer</th>
+              </tr>
+              <tr *ngFor="let answer of res.dataKGQA?.answers; let i = index" class="tui-table__tr">
+                <td class="tui-table__td">{{i+1}}</td>
+                <td class="tui-table__td">
+                  <a *ngIf="answer.startsWith('&lt;http'); else literal" target="_blank"
+                    [href]="answer | tuiMapper: getLink" tuiLink>{{answer}}</a>
+                  <ng-template #literal>
+                    {{answer}}
+                  </ng-template>
+                </td>
+              </tr>
+            </tbody>
+          </table> -->
+        </ng-template>
+      </ng-container>
+    </tui-loader>
+  </div>
 
 
 </ng-container>
