@@ -167,6 +167,11 @@ WHERE
         # None when all labeled
         res = next((edge for edge in Q.edges(data=True) if not edge[2]), None)
         return res is not None
+    
+    def __get_intersection(self, cn, entities):
+        cn_set = set(cn)
+        entities_set = set(entities)
+        return list(cn_set.intersection(entities_set))
 
     """
     Build query graph by a single step.
@@ -190,9 +195,18 @@ WHERE
                     NS: {NS}
                     """)
             unlabeled_node=NS[0]
-            if cn in entities:
-                Q.nodes[unlabeled_node]['label']=cn
-                entities.remove(cn)
+            
+            intersection_cn_entities = self.__get_intersection(cn, entities)
+            
+            if len(intersection_cn_entities) > 1:
+                raise Exception(f"""
+                    Intersection should give only 1 value.
+                    intersection_cn_entities: {intersection_cn_entities}
+                    """)
+
+            if intersection_cn_entities:
+                Q.nodes[unlabeled_node]['label']= intersection_cn_entities[0]
+                entities.remove(intersection_cn_entities[0])
             elif self.var_num > 0:
                 # variable
                 Q.nodes[unlabeled_node]['label']='?' + str(self.var_num)
