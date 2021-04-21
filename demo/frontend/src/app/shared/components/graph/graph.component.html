@@ -1,16 +1,29 @@
 <svg class="container">
-  <g *ngFor="let nodePos of nodePositions; trackBy: trackNodes" class="node">
-    <circle @posAnimation [attr.id]="nodePos.id" [attr.cx]="nodePos.cx" [attr.cy]="nodePos.cy" [attr.r]="nodeRadius"
-      stroke="black" stroke-width="3" fill="red" />
+  <g [ngSwitch]="nodePos.label.startsWith('&lt;http')" *ngFor="let nodePos of nodePositions; trackBy: trackNodes" class="node">
 
-    <text text-anchor="middle" [attr.x]="nodePos.cx" [attr.y]="nodePos.cy - (nodeRadius + 10)">
-      {{nodePos.label | tuiMapper : getLabel}}
-    </text>
+    <a *ngSwitchCase="true" target="_blank" [attr.href]="nodePos.label | tuiMapper: getLink">
+      <circle @posAnimation [attr.id]="nodePos.id" [attr.cx]="nodePos.cx" [attr.cy]="nodePos.cy" [attr.r]="nodeRadius"
+        stroke="black" stroke-width="3" fill="red" />
+
+      <text text-anchor="middle" [attr.x]="nodePos.cx" [attr.y]="nodePos.cy - (nodeRadius + 10)">
+        {{nodePos.label | tuiMapper : getLabel}}
+      </text>
+    </a>
+
+    <g *ngSwitchCase="false">
+      <circle @posAnimation [attr.id]="nodePos.id" [attr.cx]="nodePos.cx" [attr.cy]="nodePos.cy" [attr.r]="nodeRadius"
+        stroke="black" stroke-width="3" fill="red" />
+
+      <text text-anchor="middle" [attr.x]="nodePos.cx" [attr.y]="nodePos.cy - (nodeRadius + 10)">
+        {{nodePos.label | tuiMapper : getLabel}}
+      </text>
+    </g>
   </g>
 
 
   <g *ngFor="let edge of edgePositions; trackBy: trackEdges" class="edge">
-    <path [attr.id]="edge.id" [attr.d]="'M ' + edge.cx1 + ' ' + edge.cy1 + ' L ' + edge.cx2 + ' ' + edge.cy2"
+    <a target="_blank" [attr.href]="edge.label | tuiMapper: getLink">
+      <path [attr.id]="edge.id" [attr.d]="'M ' + edge.cx1 + ' ' + edge.cy1 + ' L ' + edge.cx2 + ' ' + edge.cy2"
       [attr.marker-start]="edge.backward ? 'url(#arrowhead-backward)' : ''"
       [attr.marker-end]="!edge.backward ? 'url(#arrowhead)' : ''" />
 
@@ -30,6 +43,8 @@
         <polygon points="0 0, 10 3.5, 0 7" />
       </marker>
     </g>
+    </a>
+
 
   </g>
 </svg>

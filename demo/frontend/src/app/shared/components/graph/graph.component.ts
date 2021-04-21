@@ -270,4 +270,8 @@ export class GraphComponent implements OnInit {
   getLabel(fullText: string): string {
     return fullText.split('/').pop().split('>')[0];
   }
+
+  getLink(resource: string): string {
+    return resource.split('<')[1].split('>')[0];
+  }
 }
