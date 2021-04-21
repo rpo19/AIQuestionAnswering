@@ -51,7 +51,7 @@ class QueryGenerator():
         for edge in graph.edges.data():
             triples.append(self.__generate_triple(graph, edge))
         # join triples into the body
-        body = ' {\n ' + ' '.join(triples) + ' } \n'
+        body = '{\n' + ' '.join(triples) + '}'
         return body
 
     def __get_target_variable(self, graph):
@@ -74,8 +74,9 @@ class QueryGenerator():
 
     # TODO: put here gabri's code to distinguish between different question types
     def __generate_head_and_tail(self, question, variable):
-        head = "SELECT " + variable + " WHERE \n"
-        tail = " \n "
+        head = "SELECT DISTINCT " + variable + " WHERE "
+        tail = ""
+        #tail = "\n"
         return (head, tail)
 
 
