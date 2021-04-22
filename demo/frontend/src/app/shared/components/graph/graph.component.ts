@@ -11,6 +11,7 @@ import { fromEvent } from "rxjs";
 import { WINDOW } from "@ng-web-apis/common";
 import { map, startWith } from "rxjs/operators";
 import { animate, style, transition, trigger } from "@angular/animations";
+import { round } from '@taiga-ui/cdk';
 
 /**
  * Define ID type
@@ -26,12 +27,18 @@ export interface Node {
   labelPosition?: "center" | "above" | "below";
 }
 
+export interface Relevance {
+  pred: string;
+  relevance: number;
+}
+
 /**
  * Edge of the graph
  */
 export interface Edge {
   id: ID;
   label?: string;
+  top_10: Relevance[];
   start: ID;
   end: ID;
 }
@@ -61,6 +68,7 @@ interface NodePosition {
 interface EdgePosition {
   id: ID;
   label: string;
+  top_10: Relevance[];
   backward: boolean;
   cx1: number;
   cy1: number;
@@ -90,6 +98,8 @@ export class GraphComponent implements OnInit {
   @Input() graph: Graph;
   // input node radius
   @Input() nodeRadius: number = 20;
+
+  open = false;
 
   // computed node positions
   nodePositions: NodePosition[] = [];
@@ -193,6 +203,7 @@ export class GraphComponent implements OnInit {
       edgePositions.push({
         id: edge.id,
         label: edge.label,
+        top_10: edge.top_10,
         backward: isBackward,
         cx1,
         cy1,
@@ -273,5 +284,17 @@ export class GraphComponent implements OnInit {
 
   getLink(resource: string): string {
     return resource.split('<')[1].split('>')[0];
+  }
+
+  getRelevance(relevance: number): number {
+    return round(relevance, 3)
+  }
+
+  onEdgeHover(): void {
+    this.open = true;
+  }
+
+  onEdgeLeave(): void {
+    this.open = false;
   }
 }

@@ -49,3 +49,18 @@
     }
   }
 }
+
+.edge-ralations {
+  padding: 10px 12px;
+
+  .relevance {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .tui-table__td {
+    height: auto;
+    padding: 0 16px;
+  }
+}

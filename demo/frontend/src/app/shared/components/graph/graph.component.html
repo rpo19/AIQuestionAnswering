@@ -1,5 +1,6 @@
 <svg class="container">
-  <g [ngSwitch]="nodePos.label.startsWith('&lt;http')" *ngFor="let nodePos of nodePositions; trackBy: trackNodes" class="node">
+  <g [ngSwitch]="nodePos.label.startsWith('&lt;http')" *ngFor="let nodePos of nodePositions; trackBy: trackNodes"
+    class="node">
 
     <a *ngSwitchCase="true" target="_blank" [attr.href]="nodePos.label | tuiMapper: getLink">
       <circle @posAnimation [attr.id]="nodePos.id" [attr.cx]="nodePos.cx" [attr.cy]="nodePos.cy" [attr.r]="nodeRadius"
@@ -21,30 +22,53 @@
   </g>
 
 
-  <g *ngFor="let edge of edgePositions; trackBy: trackEdges" class="edge">
+  <g (mouseenter)="onEdgeHover()" (mouseleave)="onEdgeLeave()"
+    *ngFor="let edge of edgePositions; trackBy: trackEdges; let i = index" class="edge">
     <a target="_blank" [attr.href]="edge.label | tuiMapper: getLink">
-      <path [attr.id]="edge.id" [attr.d]="'M ' + edge.cx1 + ' ' + edge.cy1 + ' L ' + edge.cx2 + ' ' + edge.cy2"
-      [attr.marker-start]="edge.backward ? 'url(#arrowhead-backward)' : ''"
-      [attr.marker-end]="!edge.backward ? 'url(#arrowhead)' : ''" />
+      <path [tuiDropdownContent]="prova" [tuiDropdown]="open" [attr.id]="edge.id"
+        [attr.d]="'M ' + edge.cx1 + ' ' + edge.cy1 + ' L ' + edge.cx2 + ' ' + edge.cy2"
+        [attr.marker-start]="edge.backward ? 'url(#arrowhead-backward)' : ''"
+        [attr.marker-end]="!edge.backward ? 'url(#arrowhead)' : ''" />
 
-    <text text-anchor="middle">
-      <textPath [attr.href]="'#' + edge.id" startOffset="50%">
-        {{edge.label | tuiMapper : getLabel}}
-      </textPath>
-    </text>
+      <text text-anchor="middle">
+        <textPath [attr.href]="'#' + edge.id" startOffset="50%">
+          {{edge.label | tuiMapper : getLabel}}
+        </textPath>
+      </text>
 
-    <g [ngSwitch]="edge.backward">
-      <marker *ngSwitchCase="true" id="arrowhead-backward" markerWidth="10" markerHeight="7" refX="10" refY="3.5"
-        orient="auto-start-reverse">
-        <polygon points="0 0, 10 3.5, 0 7" />
-      </marker>
+      <g [ngSwitch]="edge.backward">
+        <marker *ngSwitchCase="true" id="arrowhead-backward" markerWidth="10" markerHeight="7" refX="10" refY="3.5"
+          orient="auto-start-reverse">
+          <polygon points="0 0, 10 3.5, 0 7" />
+        </marker>
 
-      <marker *ngSwitchCase="false" id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
-        <polygon points="0 0, 10 3.5, 0 7" />
-      </marker>
-    </g>
+        <marker *ngSwitchCase="false" id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5"
+          orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" />
+        </marker>
+      </g>
     </a>
 
+    <ng-template #prova>
+      <ng-container *ngTemplateOutlet="dropdownContent; context:{$implicit: edge.top_10}"></ng-container>
+    </ng-template>
 
   </g>
 </svg>
+
+<ng-template #dropdownContent let-relevances>
+  <div class="edge-ralations">
+    <table class="tui-table tui-table_font-size_s">
+      <tbody>
+        <tr class="tui-table__tr">
+          <th class="tui-table__th">Relation</th>
+          <th class="tui-table__th">Relevance</th>
+        </tr>
+        <tr *ngFor="let relevance of relevances" class="tui-table__tr">
+          <td class="tui-table__td">{{relevance.pred | tuiMapper: getLabel}}</td>
+          <td class="tui-table__td">{{relevance.relevance | tuiMapper: getRelevance}}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</ng-template>

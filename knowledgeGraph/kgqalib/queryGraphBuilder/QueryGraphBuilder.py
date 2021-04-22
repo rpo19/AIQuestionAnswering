@@ -224,7 +224,7 @@ WHERE
         R = self.__get_time("Get relations", self.__get_relations, (Q, NS, cn))
         logging.debug(f"Got relations: {R.shape}")
 
-        r=self.__get_time("Get most relevant", self.__get_most_relevant_relation, (question, R))
+        r, r_top_10 = self.__get_time("Get most relevant", self.__get_most_relevant_relation, (question, R))
 
         # get an unlabelled node in NS which has a relation respecting r direction
         unlabeled_node=r["given"]
@@ -249,6 +249,8 @@ WHERE
         Q[unlabeled_edge[0]][unlabeled_edge[1]]['label']=r["pred"]
         # for drawing purposes
         Q[unlabeled_edge[0]][unlabeled_edge[1]]['short_label']=r["label"]
+        # top 10 relations
+        Q[unlabeled_edge[0]][unlabeled_edge[1]]['top_10'] = r_top_10.to_dict('records')
 
         self.var_num += 1
 
@@ -561,8 +563,15 @@ WHERE
             relevances.append(relevance/len(relation_tokens))
         relevances=np.array(relevances)
 
-        return unique_relations.iloc[np.argmax(relevances)]
+        # get top 10 relations
+        top_10_relations = self.__get_top_relevants(R, relevances)
 
+        return unique_relations.iloc[np.argmax(relevances)], top_10_relations
+
+    def __get_top_relevants(self,R, relevances):
+        R['relevance'] = relevances
+        R = R.sort_values(by='relevance', ascending=False)
+        return R[['pred', 'relevance']].iloc[0:10]
 
 
 if __name__ == "__main__":

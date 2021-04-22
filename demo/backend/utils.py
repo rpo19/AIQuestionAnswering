@@ -47,7 +47,8 @@ def to_dict_of_dicts(Q):
                 'id': start_node + '_' + end_node,
                 'start': start_node,
                 'end': end_node,
-                'label': Q[start_node][end_node]['label']
+                'label': Q[start_node][end_node]['label'],
+                'top_10': Q[start_node][end_node]['top_10']
             }
             edges.append(edge)
     
