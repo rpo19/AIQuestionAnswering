@@ -27,7 +27,7 @@
           <button class="prev-question" *ngFor="let prevQuestion of previousQuestions" tuiOption
             (click)="setQuestion(prevQuestion)">
             <tui-svg src="tuiIconTime"></tui-svg>
-            {{prevQuestion}}
+            <span>{{prevQuestion}}</span>
           </button>
         </tui-data-list>
       </ng-template>

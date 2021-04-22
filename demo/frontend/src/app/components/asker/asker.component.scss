@@ -65,6 +65,13 @@
 .previous-questions {
     .prev-question {
         justify-content: flex-start;
+        
+
+        span {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
 
         tui-svg {
             color: var(--tui-base-04);
