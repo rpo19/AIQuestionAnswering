@@ -30,7 +30,7 @@ class QueryGraphBuilder():
             else:
                 self.embeddings = embeddings
         self.var_num = 0
-        self.stops = stopwords.words('english')
+        self.stops = self.__get_stopwords()
         self.exclusions_list = [
             '<http://dbpedia.org/property/wikiPageUsesTemplate>',
             '<http://dbpedia.org/ontology/wikiPageExternalLink>',
@@ -85,6 +85,14 @@ class QueryGraphBuilder():
                 'C': ['B'],
                 'D': ['B']}
         }
+    
+    def __get_stopwords(self):
+        stops = stopwords.words('english')
+        stops.remove('where')
+        stops.remove('which')
+        stops.remove('what')
+        stops.remove('when')
+        return stops
 
     def __get_unlabeled_edge(self, graph_pattern, node):
         return next(
@@ -183,7 +191,7 @@ WHERE
 
     :return: query graph
     """
-    def build_step(self, question, cn, Q, NS, entities):
+    def build_step(self, question, cn, Q, NS, entities, entities_text):
 
         exists_unlabeled_edge = self.__are_there_unlabeled_edges(Q)
 
@@ -224,7 +232,7 @@ WHERE
         R = self.__get_time("Get relations", self.__get_relations, (Q, NS, cn))
         logging.debug(f"Got relations: {R.shape}")
 
-        r, r_top_10 = self.__get_time("Get most relevant", self.__get_most_relevant_relation, (question, R))
+        r, r_top_10 = self.__get_time("Get most relevant", self.__get_most_relevant_relation, (question, R, entities_text))
 
         # get an unlabelled node in NS which has a relation respecting r direction
         unlabeled_node=r["given"]
@@ -284,7 +292,7 @@ WHERE
 
     :return: query graph
     """
-    def build(self, question, entities, pattern):
+    def build(self, question, entities, entities_texts, pattern):
         logging.debug("Building graph...")
         logging.debug(f"question: {question}")
         logging.debug(f"entities: {entities}")
@@ -293,7 +301,7 @@ WHERE
         question, cn, Q, NS=self.pre_build(question, entities, pattern)
 
         while NS:
-            Q, NS, cn=self.build_step(question, cn, Q, NS, entities)
+            Q, NS, cn=self.build_step(question, cn, Q, NS, entities, entities_texts)
 
         return Q
 
@@ -522,14 +530,11 @@ WHERE
 
     :return: label of most relevant relation
     """
-    def __get_most_relevant_relation(self, question, R, lambda_param=0.5):
+    def __get_most_relevant_relation(self, question, R, entities_texts, lambda_param=0.5):
         unique_relations=R
-        question=question.lower().replace('?', ' ?')
-        # tokenize question
-        question_tokens=question.split()
-        # remove stopwords and punctuation tokens
-        question_tokens=[token for token in question_tokens
-                               if token not in self.stops and token not in string.punctuation]
+        
+        # preprocess question
+        question_tokens = self.__preprocess_question(question, entities_texts)
 
         relevances=[]
 
@@ -567,6 +572,23 @@ WHERE
         top_10_relations = self.__get_top_relevants(R, relevances)
 
         return unique_relations.iloc[np.argmax(relevances)], top_10_relations
+    
+    def __preprocess_question(self, question, entities_texts):
+        # remove entities
+        for entity_text in entities_texts:
+            question = question.replace(entity_text, ' ')
+
+        question = question.lower().replace('?', ' ?')
+
+        question = question.replace('where', 'place')
+        question = question.replace('when', 'date')
+
+        # tokenize question
+        question_tokens=question.split()
+        # remove stopwords and punctuation tokens
+        question_tokens=[token for token in question_tokens
+                               if token not in self.stops and token not in string.punctuation]
+        return question_tokens
 
     def __get_top_relevants(self,R, relevances):
         R['relevance'] = relevances

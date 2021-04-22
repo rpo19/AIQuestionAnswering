@@ -42,7 +42,7 @@ def ask_kgqa():
 
         # query graph construction
         try:
-            Q = query_graph_builder.build(question, entities, patterns[0])
+            Q = query_graph_builder.build(question, entities, texts, patterns[0])
         except:
             abort(500, description="Could not construct the query graph.")
 
