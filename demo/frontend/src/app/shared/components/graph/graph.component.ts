@@ -9,9 +9,9 @@ import {
 } from "@angular/core";
 import { fromEvent } from "rxjs";
 import { WINDOW } from "@ng-web-apis/common";
-import { map, startWith } from "rxjs/operators";
+import { map, startWith, takeUntil } from "rxjs/operators";
 import { animate, style, transition, trigger } from "@angular/animations";
-import { round } from '@taiga-ui/cdk';
+import { round, TuiDestroyService } from '@taiga-ui/cdk';
 
 /**
  * Define ID type
@@ -91,7 +91,8 @@ interface EdgePosition {
         animate("300ms ease-out", style({ r: "*" }))
       ])
     ])
-  ]
+  ],
+  providers: [TuiDestroyService]
 })
 export class GraphComponent implements OnInit {
   // input graph
@@ -118,6 +119,7 @@ export class GraphComponent implements OnInit {
   constructor(
     private _el: ElementRef,
     private _cdr: ChangeDetectorRef,
+    @Inject(TuiDestroyService) private readonly destroy$: TuiDestroyService,
     @Inject(WINDOW) readonly windowRef: Window
   ) { }
 
@@ -139,7 +141,7 @@ export class GraphComponent implements OnInit {
     }
 
     // compute coordinates of nodes and edges on resize and initial loading
-    this._resize$.subscribe(() => {
+    this._resize$.pipe(takeUntil(this.destroy$)).subscribe(() => {
       this.nodePositions = this._computeNodesCoordinates();
       this.edgePositions = this._computeEdgesCoordinates();
       this._cdr.markForCheck();

@@ -6,15 +6,17 @@ import { Observable, of } from 'rxjs';
 import { ApiService } from 'src/app/shared/services/api/api.service';
 import { LoaderService } from 'src/app/shared/services/loader/loader.service';
 import { DataKGQA } from 'src/app/shared/models/data';
-import { catchError, debounceTime, distinctUntilChanged, filter, map, startWith, switchMapTo, tap } from 'rxjs/operators';
+import { catchError, debounceTime, distinctUntilChanged, filter, map, startWith, switchMapTo, takeUntil, tap } from 'rxjs/operators';
 import { QuestionStoreService } from 'src/app/shared/services/local-storage/question-store.service';
 import { HttpErrorResponse } from '@angular/common/http';
+import { TuiDestroyService } from '@taiga-ui/cdk';
 
 @Component({
   selector: 'app-asker',
   templateUrl: './asker.component.html',
   styleUrls: ['./asker.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  providers: [TuiDestroyService]
 })
 export class AskerComponent implements OnInit {
 
@@ -40,6 +42,7 @@ export class AskerComponent implements OnInit {
     private readonly _api: ApiService,
     private readonly _loader: LoaderService,
     private readonly _questionStoreService: QuestionStoreService,
+    @Inject(TuiDestroyService) private readonly destroy$: TuiDestroyService,
     @Inject(TuiNotificationsService) private readonly _notificationsService: TuiNotificationsService,
     @Inject(TuiDialogService) private readonly dialogService: TuiDialogService
   ) { }
@@ -57,7 +60,8 @@ export class AskerComponent implements OnInit {
         return !foundQ || foundQ.length === 0 ? [] : foundQ
       }),
       startWith([]),
-      tap((questions) => this._shouldCloseDropdown(questions) ? this.openDropdown = false : this.openDropdown = true)
+      tap((questions) => this._shouldCloseDropdown(questions) ? this.openDropdown = false : this.openDropdown = true),
+      takeUntil(this.destroy$)
     )
   }
 
