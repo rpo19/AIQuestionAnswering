@@ -11,7 +11,7 @@ import knowledgeGraph.kgqalib.shared.utils as utils
 
 def load_models():
     MODEL_PATH = './data/models/pattern_classifier.h5'
-    EMBEDDINGS_PATH = './data/glove.twitter.27B.200d.pickle'
+    EMBEDDINGS_PATH = './data/glove.840B.300d.pickle' #'./data/glove.twitter.27B.200d.pickle'
 
     # instantiate modules
     ## Pattern classifier
