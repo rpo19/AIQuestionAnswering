@@ -41,10 +41,10 @@ def ask_kgqa():
         entities_copy = entities.copy()
 
         # query graph construction
-        try:
-            Q = query_graph_builder.build(question, entities, texts, patterns[0])
-        except:
-            abort(500, description="Could not construct the query graph.")
+        # try:
+        Q = query_graph_builder.build(question, entities, texts, patterns[0])
+        # except Exception as e:
+        #     abort(500, description="Could not construct the query graph.")
 
         # build SPARQL query and retrieve answers
         try:

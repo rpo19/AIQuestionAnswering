@@ -21,7 +21,7 @@ def load_models():
     entity_extractor = DBPediaEntityExtractor()
 
     ## Query graph builder
-    query_graph_builder = QueryGraphBuilder(path_to_embeddings = EMBEDDINGS_PATH, bert_similarity=False)
+    query_graph_builder = QueryGraphBuilder(path_to_embeddings = EMBEDDINGS_PATH, bert_similarity=False, mode='sentence_roberta')
 
     ## Query generator
     query_generator = QueryGenerator()

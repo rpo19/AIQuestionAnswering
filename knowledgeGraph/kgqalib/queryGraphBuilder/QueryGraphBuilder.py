@@ -13,22 +13,26 @@ import itertools
 import time
 import logging
 import pickle
-
+from flair.data import Sentence
+from flair.embeddings import SentenceTransformerDocumentEmbeddings
 
 class QueryGraphBuilder():
-    def __init__(self, embeddings=None, path_to_embeddings='../../data/glove.twitter.27B.200d.pickle', bert_similarity=True, entities_cap=25):
+    def __init__(self, embeddings=None, path_to_embeddings='../../data/glove.twitter.27B.200d.pickle',
+        bert_similarity=True, entities_cap=25, mode='sentence_roberta'):
         self.entities_cap = entities_cap
-        if bert_similarity:
-            self.vectorizer = Vectorizer()
-        else:
-            if embeddings is None:
+        self.mode = mode
+        if embeddings is None:
+            if mode == 'glove':
                 try:
+                    # glove
                     print('Loading embeddings...')
                     self.embeddings=pickle.load(open(path_to_embeddings, 'rb'))
                 except Exception as e:
                     raise e
-            else:
-                self.embeddings = embeddings
+            elif mode == 'sentence_roberta':
+                self.embeddings = SentenceTransformerDocumentEmbeddings('stsb-roberta-large')
+        else:
+            self.embeddings = embeddings
         self.var_num = 0
         self.stops = self.__get_stopwords()
         self.exclusions_list = [
@@ -521,6 +525,39 @@ WHERE
         splitted=re.findall(r'[A-Z]?[a-z]+|[A-Z]+(?=[A-Z]|$)', last)
         return ' '.join(splitted)
 
+    def __get_most_relevant_relation(self, question, R, entities_texts, lambda_param=0.5):
+        if self.mode == 'glove':
+            return self.__get_most_relevant_relation_glove_levenshtein(question, R, entities_texts, lambda_param)
+        elif self.mode == 'sentence_roberta':
+            return self.__get_most_relevant_relation_sentence_roberta(question, R, entities_texts, lambda_param)
+
+    def __get_most_relevant_relation_sentence_roberta(self, question, R, entities_texts, lambda_param=0.5):
+        unique_relations=R
+        
+        # preprocess question
+        # question_tokens = self.__preprocess_question(question, entities_texts)
+
+        relevances=[]
+
+        flair_question = Sentence(question)
+        # embed the sentence
+        self.embeddings.embed(flair_question)
+
+        for index, row in unique_relations.iterrows():
+            print('label: {}'.format(row['label']))
+            flair_relation = Sentence(row['label'])
+            self.embeddings.embed(flair_relation)
+
+            relevance = 1 - spatial.distance.cosine(flair_question.embedding.tolist(), flair_relation.embedding.tolist())
+            relevances.append(relevance)
+        
+        relevances=np.array(relevances)
+
+        # get top 10 relations
+        top_10_relations = self.__get_top_relevants(R, relevances)
+
+        return unique_relations.iloc[np.argmax(relevances)], top_10_relations
+
     """
     Get most relevant relation using given embedding and levenshtein_distance.
 
@@ -530,7 +567,7 @@ WHERE
 
     :return: label of most relevant relation
     """
-    def __get_most_relevant_relation(self, question, R, entities_texts, lambda_param=0.5):
+    def __get_most_relevant_relation_glove_levenshtein(self, question, R, entities_texts, lambda_param=0.5):
         unique_relations=R
         
         # preprocess question
@@ -559,11 +596,11 @@ WHERE
                     else:
                         cos_sim=0
                     # compute lev distance
-                    lev_distance=levenshtein_distance(
-                        question_token, rel_token)
+                    length = max(len(question_token), len(rel_token))
+                    lev_sim = (length - levenshtein_distance(question_token, rel_token)) / length
                     # sum to previous relenvances of relation tokens and question tokens
                     relevance += lambda_param * cos_sim + \
-                        (1 - lambda_param) * 1/(lev_distance+1)
+                        (1 - lambda_param) * lev_sim
 
             relevances.append(relevance/len(relation_tokens))
         relevances=np.array(relevances)
