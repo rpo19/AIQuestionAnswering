@@ -151,6 +151,8 @@ class DBPediaEntityExtractor():
     Extract and link entities from a text with DBPedia Spotlight.
     """
     def __spotlight_extract(self, text):
+        # possessive forms may induce problems
+        text = text.replace('\'s ', ' ')
         # execute NER and NEL
         doc = self.nlp(text)
         nel_ents = doc.ents
@@ -182,3 +184,29 @@ class DBPediaEntityExtractor():
             return self.__spotlight_extract(text)
         elif self.mode == 'custom':
             return self.__extract_custom(text)
+
+    def extract_v2(self, text):
+        # possessive forms may induce problems
+        text = text.replace('\'s ', ' ')
+        # execute NER and NEL
+        doc = self.nlp(text)
+        nel_ents = doc.ents
+        
+        # filter entities
+        filtered_ents_uri = []
+        filtered_ents_text = []
+        for nel_ent in nel_ents:
+            # keep only entities associated with proper names
+            if nel_ent.text[0].isupper():
+                filtered_ents_uri.append('<'+nel_ent.kb_id_+'>')
+                filtered_ents_text.append(nel_ent.text)
+        
+        return filtered_ents_uri, filtered_ents_text
+
+    # returns only the last entity
+    def extractLast(self, text):
+        ents = self.extract_v2(text)
+        if len(ents[0]) > 0:
+            return ents[0][-1], ents[1][-1]
+        else:
+            return ents
