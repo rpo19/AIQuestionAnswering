@@ -11,7 +11,9 @@ import knowledgeGraph.kgqalib.shared.utils as utils
 
 def load_models():
     MODEL_PATH = './data/models/pattern_classifier.h5'
-    EMBEDDINGS_PATH = './data/glove.840B.300d.pickle' #'./data/glove.twitter.27B.200d.pickle'
+    EMBEDDINGS_PATH = './data/glove.840B.300d.gensim'
+    MODE = 'glove' # 'glove' | 'stacked' | 'sentence_roberta'
+
 
     # instantiate modules
     ## Pattern classifier
@@ -21,7 +23,7 @@ def load_models():
     entity_extractor = DBPediaEntityExtractor()
 
     ## Query graph builder
-    query_graph_builder = QueryGraphBuilder(path_to_embeddings = EMBEDDINGS_PATH, bert_similarity=False, mode='sentence_roberta')
+    query_graph_builder = QueryGraphBuilder(mode=MODE, path_to_embeddings=EMBEDDINGS_PATH)
 
     ## Query generator
     query_generator = QueryGenerator()
@@ -32,8 +34,6 @@ def to_dict_of_dicts(Q):
     edge_list = nx.to_dict_of_lists(Q)
     nodes = []
     edges = []
-
-    
 
     for index, start_node in enumerate(edge_list):
         node = {

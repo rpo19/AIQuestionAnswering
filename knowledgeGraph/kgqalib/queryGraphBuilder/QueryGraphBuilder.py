@@ -13,24 +13,39 @@ import itertools
 import time
 import logging
 import pickle
+import flair
+flair.cache_root = './data/flair'
 from flair.data import Sentence
 from flair.embeddings import SentenceTransformerDocumentEmbeddings
+from flair.embeddings import WordEmbeddings, FlairEmbeddings, StackedEmbeddings
 
 class QueryGraphBuilder():
     def __init__(self, embeddings=None, path_to_embeddings='../../data/glove.twitter.27B.200d.pickle',
-        bert_similarity=True, entities_cap=25, mode='sentence_roberta'):
+                        entities_cap=25, mode='glove'):
         self.entities_cap = entities_cap
         self.mode = mode
         if embeddings is None:
+            print('Loading embeddings...')
             if mode == 'glove':
                 try:
-                    # glove
-                    print('Loading embeddings...')
-                    self.embeddings=pickle.load(open(path_to_embeddings, 'rb'))
+                    # glove 840B-300d
+                    self.embeddings= WordEmbeddings(path_to_embeddings)
                 except Exception as e:
                     raise e
             elif mode == 'sentence_roberta':
                 self.embeddings = SentenceTransformerDocumentEmbeddings('stsb-roberta-large')
+            elif mode == 'stacked':
+                # init standard GloVe embedding
+                glove_embedding = WordEmbeddings('glove')
+
+                # init Flair forward and backwards embeddings
+                flair_embedding_forward = FlairEmbeddings('news-forward')
+                flair_embedding_backward = FlairEmbeddings('news-backward')
+                self.embeddings = StackedEmbeddings([
+                                        glove_embedding,
+                                        flair_embedding_forward,
+                                        flair_embedding_backward,
+                                       ])
         else:
             self.embeddings = embeddings
         self.var_num = 0
@@ -62,7 +77,6 @@ class QueryGraphBuilder():
             '<http://dbpedia.org/ontology/wikiPageDisambiguates>',
             '<http://dbpedia.org/property/1namedata>'
         ]
-        self.bert_similarity = bert_similarity
         self.patterns = {
             'p0': {'A': []},
             'p1': {'A': ['B']},
@@ -184,16 +198,42 @@ WHERE
         cn_set = set(cn)
         entities_set = set(entities)
         return list(cn_set.intersection(entities_set))
+    
+    """
+    Build query graph.
+    """
+    def build(self, question, entities, entities_texts, pattern):
+        logging.debug("Building graph...")
+        logging.debug(f"question: {question}")
+        logging.debug(f"entities: {entities}")
+        logging.debug(f"pattern: {pattern}")
+
+        question, cn, Q, NS=self.pre_build(question, entities, pattern)
+
+        while NS:
+            Q, NS, cn=self.build_step(question, cn, Q, NS, entities, entities_texts)
+
+        return Q
+    
+    """
+    Prepare graph builder.
+    """
+    def pre_build(self, question, entities, pattern):
+        # TODO: higher score linking
+        cn=[entities[0]]
+        # get pattern graph
+        p=self.__get_pattern(pattern)
+        # make a copy of the pattern
+        Q=p.copy()
+        # get non-intermediate nodes
+        NS=self.__get_non_intermediate_nodes(p)
+
+        self.var_num=0
+
+        return question, cn, Q, NS
 
     """
     Build query graph by a single step.
-
-    :param question: natural language question
-    :param cn: cn entity resources
-    :param Q: query graph
-    :param NS: NS
-
-    :return: query graph
     """
     def build_step(self, question, cn, Q, NS, entities, entities_text):
 
@@ -273,41 +313,10 @@ WHERE
 
         return Q, NS, cn
 
-    def pre_build(self, question, entities, pattern):
-        # TODO: higher score linking
-        cn=[entities[0]]
-        # get pattern graph
-        p=self.__get_pattern(pattern)
-        # make a copy of the pattern
-        Q=p.copy()
-        # get non-intermediate nodes
-        NS=self.__get_non_intermediate_nodes(p)
+    def ask(self, question, entities, pattern, endpoint='http://dbpedia.org/sparql'):
+        Q=self.build(question, entities, pattern)
 
-        self.var_num=0
-
-        return question, cn, Q, NS
-
-    """
-    Build query graph.
-
-    :param question: natural language question
-    :param entity: entity resource
-    :param pattern: graph pattern of the question
-
-    :return: query graph
-    """
-    def build(self, question, entities, entities_texts, pattern):
-        logging.debug("Building graph...")
-        logging.debug(f"question: {question}")
-        logging.debug(f"entities: {entities}")
-        logging.debug(f"pattern: {pattern}")
-
-        question, cn, Q, NS=self.pre_build(question, entities, pattern)
-
-        while NS:
-            Q, NS, cn=self.build_step(question, cn, Q, NS, entities, entities_texts)
-
-        return Q
+        return self.ask_step(question, Q, endpoint)
 
     def ask_step(self, question, Q, endpoint='http://dbpedia.org/sparql'):
         query=generateQuery.generateQuery(question, Q)
@@ -323,17 +332,10 @@ WHERE
 
         return pd.DataFrame([[item.n3() for item in row] for row in results])
 
-    def ask(self, question, entities, pattern, endpoint='http://dbpedia.org/sparql'):
-        Q=self.build(question, entities, pattern)
 
-        return self.ask_step(question, Q, endpoint)
 
     """
     Get graph pattern for a pattern p.
-
-    :param pattern: pattern dictionary
-
-    :return: networkx graph of the pattern p
     """
     def __get_pattern(self, pattern):
         return nx.from_dict_of_lists(self.patterns[pattern],
@@ -341,22 +343,12 @@ WHERE
 
     """
     Get non intermediate notes for a graph pattern p.
-
-    :param p: graph pattern
-
-    :return: dict of non-intermediary nodes
     """
     def __get_non_intermediate_nodes(self, p):
         return [node for node in p.nodes if p.out_degree(node) + p.in_degree(node) < 2]
 
     """
     Get outgoing or incoming relations for an entity.
-
-    :param entity: entity for which you want to find relations
-    :param query_type: 'outgoing' for outgoing relations, 'incoming' for incoming relations
-    :param query_type: SPARQL endpoint
-
-    :return: dataframe of outgoing/incoming relations (URI, label)
     """
     def __get_relations(self, Q, NS, cn, endpoint='http://dbpedia.org/sparql'):
 
@@ -515,27 +507,96 @@ WHERE
 
     """
     Parse URI to extract a label.
-
-    :param pred: predicate URI
-
-    :return: predicate label
     """
     def __parse_predicate(self, pred):
         last=pred.rsplit('/', 1)[1]
         splitted=re.findall(r'[A-Z]?[a-z]+|[A-Z]+(?=[A-Z]|$)', last)
         return ' '.join(splitted)
 
-    def __get_most_relevant_relation(self, question, R, entities_texts, lambda_param=0.5):
+    """
+    Get most relevant relation.
+    """
+    def __get_most_relevant_relation(self, question, R, entities_texts, lambda_param=0.55):
         if self.mode == 'glove':
             return self.__get_most_relevant_relation_glove_levenshtein(question, R, entities_texts, lambda_param)
         elif self.mode == 'sentence_roberta':
             return self.__get_most_relevant_relation_sentence_roberta(question, R, entities_texts, lambda_param)
-
-    def __get_most_relevant_relation_sentence_roberta(self, question, R, entities_texts, lambda_param=0.5):
+        elif self.mode == 'stacked':
+            return self.__get_most_relevant_relation_stacked_embeddings(question, R, entities_texts, lambda_param)
+    
+    """
+    Get most relevant relation using given embedding and levenshtein_distance.
+    """
+    def __get_most_relevant_relation_glove_levenshtein(self, question, R, entities_texts, lambda_param):
         unique_relations=R
         
         # preprocess question
-        # question_tokens = self.__preprocess_question(question, entities_texts)
+        question = self.__preprocess_question(question, entities_texts)
+
+        relevances=[]
+
+        flair_question = Sentence(question)
+        # embed the sentence
+        self.embeddings.embed(flair_question)
+
+        for index, row in unique_relations.iterrows():
+            flair_relation = Sentence(row['label'])
+            self.embeddings.embed(flair_relation)
+            relevance=0
+            for rel_token in flair_relation:
+                for question_token in flair_question:
+                    cos_sim = 1 - spatial.distance.cosine(rel_token.embedding.tolist(), question_token.embedding.tolist())
+
+                    length = max(len(question_token.text), len(rel_token.text))
+                    lev_sim = (length - levenshtein_distance(question_token.text, rel_token.text)) / length
+                    # sum to previous relenvances of relation tokens and question tokens
+                    relevance += lambda_param * cos_sim + (1 - lambda_param) * lev_sim
+
+            relevances.append(relevance/len(flair_relation.tokens))
+        relevances=np.array(relevances)
+
+        # get top 10 relations
+        top_10_relations = self.__get_top_relevants(R, relevances)
+        return top_10_relations.iloc[0], top_10_relations[['pred', 'relevance']].iloc[0:10]
+    
+    """
+    Get most relevant relation using stacked word level embeddings
+    """
+    def __get_most_relevant_relation_stacked_embeddings(self, question, R, entities_texts, lambda_param):
+        unique_relations=R
+
+        relevances=[]
+
+        flair_question = Sentence(question)
+        # embed the sentence
+        self.embeddings.embed(flair_question)
+
+        for index, row in unique_relations.iterrows():
+            flair_relation = Sentence(row['label'])
+            self.embeddings.embed(flair_relation)
+            relevance=0
+            for rel_token in flair_relation:
+                for question_token in flair_question:
+                    cos_sim = 1 - spatial.distance.cosine(rel_token.embedding.tolist(), question_token.embedding.tolist())
+
+                    length = max(len(question_token.text), len(rel_token.text))
+                    lev_sim = (length - levenshtein_distance(question_token.text, rel_token.text)) / length
+                    # sum to previous relenvances of relation tokens and question tokens
+                    relevance += lambda_param * cos_sim + (1 - lambda_param) * lev_sim
+
+            relevances.append(relevance/len(flair_relation.tokens))
+        relevances=np.array(relevances)
+
+        # get top 10 relations
+        top_10_relations = self.__get_top_relevants(R, relevances)
+
+        return top_10_relations.iloc[0], top_10_relations[['pred', 'relevance']].iloc[0:10]
+
+    """
+    Get most relevant relation using sentence level embedding with Roberta.
+    """
+    def __get_most_relevant_relation_sentence_roberta(self, question, R, entities_texts, lambda_param):
+        unique_relations=R
 
         relevances=[]
 
@@ -556,22 +617,16 @@ WHERE
         # get top 10 relations
         top_10_relations = self.__get_top_relevants(R, relevances)
 
-        return unique_relations.iloc[np.argmax(relevances)], top_10_relations
+        return top_10_relations.iloc[0], top_10_relations[['pred', 'relevance']].iloc[0:10]
 
     """
-    Get most relevant relation using given embedding and levenshtein_distance.
-
-    :param question: question in natural language
-    :param R: set of candidate relations
-    :param lambda_param: hyperparameter describing the importance of cosine similarity and levenshtein_distance
-
-    :return: label of most relevant relation
+    Get most relevant relation using given embedding and levenshtein_distance // DEPRECATED.
     """
-    def __get_most_relevant_relation_glove_levenshtein(self, question, R, entities_texts, lambda_param=0.5):
+    def __get_most_relevant_relation_glove_levenshtein_old(self, question, R, entities_texts, lambda_param):
         unique_relations=R
         
         # preprocess question
-        question_tokens = self.__preprocess_question(question, entities_texts)
+        question = self.__preprocess_question(question, entities_texts)
 
         relevances=[]
 
@@ -608,7 +663,7 @@ WHERE
         # get top 10 relations
         top_10_relations = self.__get_top_relevants(R, relevances)
 
-        return unique_relations.iloc[np.argmax(relevances)], top_10_relations
+        return top_10_relations.iloc[0], top_10_relations[['pred', 'relevance']].iloc[0:10]
     
     def __preprocess_question(self, question, entities_texts):
         # remove entities
@@ -625,12 +680,13 @@ WHERE
         # remove stopwords and punctuation tokens
         question_tokens=[token for token in question_tokens
                                if token not in self.stops and token not in string.punctuation]
-        return question_tokens
+        return ' '.join(question_tokens)
 
     def __get_top_relevants(self,R, relevances):
-        R['relevance'] = relevances
-        R = R.sort_values(by='relevance', ascending=False)
-        return R[['pred', 'relevance']].iloc[0:10]
+        tmp = R.copy()
+        tmp['relevance'] = relevances
+        tmp = tmp.sort_values(by='relevance', ascending=False)
+        return tmp
 
 
 if __name__ == "__main__":
@@ -649,7 +705,7 @@ if __name__ == "__main__":
     logging.debug(f"Loaded embeddings in {n} seconds.")
 
     query_builder=QueryGraphBuilder(
-        embeddings=embeddings, bert_similarity=False)
+        embeddings=embeddings)
 
     res=query_builder.ask(question='What university campuses are situated in Indiana?',
                             entities=["<http://dbpedia.org/resource/Indiana>"],
