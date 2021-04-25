@@ -167,11 +167,8 @@ class DBPediaEntityExtractor():
                 for ner_ent in ner_ents:
                     # keep only entities extracted with both spacy's NER and dbpedia-spotlight
                     if ner_ent.text == nel_ent.text:
-                        ent = {
-                            'id': nel_ent.kb_id_,
-                            'text': nel_ent.text
-                        }
-                        filtered_ents.append()
+                        filtered_ents_uri.append('<'+nel_ent.kb_id_+'>')
+                        filtered_ents_text.append(nel_ent.text)
             except:
                 # no NER ents, keep all the dbpedia-spotlight ones
                 filtered_ents_uri.append('<'+nel_ent.kb_id_+'>')
@@ -190,17 +187,30 @@ class DBPediaEntityExtractor():
         text = text.replace('\'s ', ' ')
         # execute NER and NEL
         doc = self.nlp(text)
-        nel_ents = doc.ents
-        
+        nel_ents = doc.ents        
         # filter entities
         filtered_ents_uri = []
         filtered_ents_text = []
         for nel_ent in nel_ents:
-            # keep only entities associated with proper names
             if nel_ent.text[0].isupper():
                 filtered_ents_uri.append('<'+nel_ent.kb_id_+'>')
                 filtered_ents_text.append(nel_ent.text)
-        
+            else:
+                try:
+                    ner_ents = doc.spans['ents_original']
+                    for ner_ent in ner_ents:
+                        # keep only entities extracted with both spacy's NER and dbpedia-spotlight
+                        if ner_ent.text == nel_ent.text:
+                            filtered_ents_uri.append('<'+nel_ent.kb_id_+'>')
+                            filtered_ents_text.append(nel_ent.text)
+                except:
+                    continue
+        # if filter was too strict it's ok to keep all entities        
+        if len(filtered_ents_uri) == 0:
+            for nel_ent in nel_ents:
+                filtered_ents_uri.append('<'+nel_ent.kb_id_+'>')
+                filtered_ents_text.append(nel_ent.text)
+
         return filtered_ents_uri, filtered_ents_text
 
     # returns only the last entity
