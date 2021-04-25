@@ -32,7 +32,7 @@ def ask_kgqa():
             abort(500, description="Pattern could not be classified.")
 
         # extract and link entities
-        entities, texts = entity_extractor.extract(question)
+        entities, texts, scores = entity_extractor.extract(question)
         print('Extracted entities:', entities)
         print('Extracted texts:', texts)
         if not entities:

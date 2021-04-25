@@ -12,7 +12,8 @@ import knowledgeGraph.kgqalib.shared.utils as utils
 def load_models():
     MODEL_PATH = './data/models/pattern_classifier.h5'
     EMBEDDINGS_PATH = './data/glove.840B.300d.gensim'
-    MODE = 'glove' # 'glove' | 'stacked' | 'sentence_roberta'
+    GRAPH_BUILDER_MODE = 'glove' # 'glove' | 'stacked' | 'sentence_roberta'
+    NER_MODE = 'custom' # 'spotlight' | 'custom'
 
 
     # instantiate modules
@@ -20,10 +21,10 @@ def load_models():
     pattern_classifier = SQPBuilder().load(MODEL_PATH)
 
     ## Entity extractor
-    entity_extractor = DBPediaEntityExtractor()
+    entity_extractor = DBPediaEntityExtractor(mode=NER_MODE)
 
     ## Query graph builder
-    query_graph_builder = QueryGraphBuilder(mode=MODE, path_to_embeddings=EMBEDDINGS_PATH)
+    query_graph_builder = QueryGraphBuilder(mode=GRAPH_BUILDER_MODE, path_to_embeddings=EMBEDDINGS_PATH)
 
     ## Query generator
     query_generator = QueryGenerator()

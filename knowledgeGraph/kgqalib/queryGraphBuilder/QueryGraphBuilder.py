@@ -14,7 +14,8 @@ import time
 import logging
 import pickle
 import flair
-flair.cache_root = './data/flair'
+from pathlib import Path
+flair.cache_root = Path('./data/flair')
 from flair.data import Sentence
 from flair.embeddings import SentenceTransformerDocumentEmbeddings
 from flair.embeddings import WordEmbeddings, FlairEmbeddings, StackedEmbeddings
