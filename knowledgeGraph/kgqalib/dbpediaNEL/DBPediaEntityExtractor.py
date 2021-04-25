@@ -155,8 +155,7 @@ class DBPediaEntityExtractor():
         text = text.replace('\'s ', ' ')
         # execute NER and NEL
         doc = self.nlp(text)
-        nel_ents = doc.ents
-        
+        nel_ents = doc.spans['dbpedia_ents']        
         # filter entities
         filtered_ents_uri = []
         filtered_ents_text = []
@@ -187,7 +186,7 @@ class DBPediaEntityExtractor():
         text = text.replace('\'s ', ' ')
         # execute NER and NEL
         doc = self.nlp(text)
-        nel_ents = doc.ents        
+        nel_ents = doc.spans['dbpedia_ents']
         # filter entities
         filtered_ents_uri = []
         filtered_ents_text = []
@@ -201,6 +200,7 @@ class DBPediaEntityExtractor():
                     for ner_ent in ner_ents:
                         # keep only entities extracted with both spacy's NER and dbpedia-spotlight
                         if ner_ent.text == nel_ent.text:
+                            print(ner_ent.text, 'VS', nel_ent.text)
                             filtered_ents_uri.append('<'+nel_ent.kb_id_+'>')
                             filtered_ents_text.append(nel_ent.text)
                 except:
