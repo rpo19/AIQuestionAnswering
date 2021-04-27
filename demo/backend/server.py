@@ -32,7 +32,7 @@ def ask_kgqa():
             abort(500, description="Pattern could not be classified.")
 
         # extract and link entities
-        entities, texts, scores = entity_extractor.extract(question)
+        entities, texts = entity_extractor.extract(question)
         print('Extracted entities:', entities)
         print('Extracted texts:', texts)
         if not entities:
@@ -47,10 +47,10 @@ def ask_kgqa():
         #     abort(500, description="Could not construct the query graph.")
 
         # build SPARQL query and retrieve answers
-        try:
-            SPARQL_query = query_generator.generate(question, Q)
-        except:
-            abort(500, description="Could not generate the SPARQL query.")
+        #try:
+        SPARQL_query = query_generator.generate(question, Q)
+        #except:
+        #    abort(500, description="Could not generate the SPARQL query.")
         
         try:
             answers_df = query_generator.ask(SPARQL_query)

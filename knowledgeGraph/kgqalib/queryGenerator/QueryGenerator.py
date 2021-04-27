@@ -6,11 +6,13 @@ from tabulate import tabulate
 import nltk
 import re
 nltk.download('wordnet')
+nltk.download('averaged_perceptron_tagger')
 from nltk.corpus import wordnet
 
 class QueryGenerator():
 
     def generate(self, question, graph):
+        question = question.lower()
         # query head and tail
         variable = self.__get_target_variable(graph)
         (head, tail) = self.__generate_head_and_tail(question, variable)
@@ -106,7 +108,7 @@ class QueryGenerator():
         return []
     
     # computes contraints for the question
-    def constraint(question):
+    def __constraint(self, question):
         category=[]
         
         question= re.sub(' +', ' ', question)
@@ -122,18 +124,17 @@ class QueryGenerator():
         '''ordinal_number = contain_ordinal_number(tokens)
         if len(ordinal_number)>0:  
             category.append("ordinal") # limit'''
-        return category, ordinal_number
+        return category
 
     # TODO: put here gabri's code to distinguish between different question types
     def __generate_head_and_tail(self, question, variable):
         print("Question: ", question)
-        constraints, ordinal = constraint(question)
+        constraints = self.__constraint(question)
         print("Constraints: ", constraints)
-        print("Ordinal: ", ordinal)
         if "answer-type" in constraints:
             head = "ASK "
         elif "aggregation" in constraints:
-            head = "SELECT (count(distinct "+ variable +") as ?count) "
+            head = "SELECT ( COUNT ( DISTINCT "+ variable +") as ?count ) "
         else:
             head = "SELECT DISTINCT " + variable + " WHERE "
         

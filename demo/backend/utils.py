@@ -13,7 +13,7 @@ def load_models():
     MODEL_PATH = './data/models/pattern_classifier.h5'
     EMBEDDINGS_PATH = './data/glove.840B.300d.gensim'
     GRAPH_BUILDER_MODE = 'glove' # 'glove' | 'stacked' | 'sentence_roberta'
-    NER_MODE = 'custom' # 'spotlight' | 'custom'
+    NER_MODE = 'spotlight' # 'spotlight' | 'custom'
 
 
     # instantiate modules

@@ -14,6 +14,7 @@ import time
 import logging
 import pickle
 import flair
+import math
 from pathlib import Path
 flair.cache_root = Path('./data/flair')
 from flair.data import Sentence
@@ -546,7 +547,13 @@ WHERE
             relevance=0
             for rel_token in flair_relation:
                 for question_token in flair_question:
-                    cos_sim = 1 - spatial.distance.cosine(rel_token.embedding.tolist(), question_token.embedding.tolist())
+                    rel_token_embedding = rel_token.embedding.tolist()
+                    question_token_embedding = question_token.embedding.tolist()
+                    
+
+                    cos_sim = 1 - spatial.distance.cosine(rel_token_embedding, question_token_embedding)
+                    if math.isnan(cos_sim):
+                        cos_sim = 0
 
                     length = max(len(question_token.text), len(rel_token.text))
                     lev_sim = (length - levenshtein_distance(question_token.text, rel_token.text)) / length
@@ -555,6 +562,7 @@ WHERE
 
             relevances.append(relevance/len(flair_relation.tokens))
         relevances=np.array(relevances)
+        
 
         # get top 10 relations
         top_10_relations = self.__get_top_relevants(R, relevances)

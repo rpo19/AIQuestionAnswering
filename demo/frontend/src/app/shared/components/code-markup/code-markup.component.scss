@@ -36,6 +36,12 @@ pre {
           &.word-select {
             color: var(--tui-accent-hover);
           }
+          &.word-ask {
+            color: var(--tui-support-02);
+          }
+          &.word-count {
+            color: var(--tui-accent-hover);
+          }
           &.word-distinct {
             color: var(--tui-accent-hover);
         }

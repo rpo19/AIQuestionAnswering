@@ -20,6 +20,8 @@ interface Row {
  */
 const OPERATORS = {
   SELECT: 'word-select',
+  ASK: 'word-ask',
+  COUNT: 'word-count',
   DISTINCT: 'word-distinct',
   WHERE: 'word-where'
 };
