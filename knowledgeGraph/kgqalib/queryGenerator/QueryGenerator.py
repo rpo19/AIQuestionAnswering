@@ -15,14 +15,14 @@ class QueryGenerator():
         question = question.lower()
         # query head and tail
         variable = self.__get_target_variable(graph)
-        (head, tail) = self.__generate_head_and_tail(question, variable)
+        (head, tail, constraints) = self.__generate_head_and_tail(question, variable)
         # query body
         body = self.__generate_body(graph)
         # assemble query
         query = head + body + tail
-        return query
+        return query, constraints
     
-    def ask(self, query, endpoint='http://dbpedia.org/sparql'):
+    def ask(self, graph, entities, query, constraints, endpoint='http://dbpedia.org/sparql'):
         logging.debug("Ask query:")
         logging.debug(query)
 
@@ -31,13 +31,24 @@ class QueryGenerator():
         except Exception as e:
             logging.error(f"Exception {e} on query:\n\n{query}")
             raise e
+        
+        if 'answer-type' in constraints:
+            answer = results.hasresult()
+            for node in graph.nodes:
+                if graph.nodes[node]['label'] in entities:
+                    entities.remove(graph.nodes[node]['label'])
+
+            if len(entities) > 0:
+                answer = False
+
+            return pd.DataFrame([answer], columns=['Answers'])
 
         return pd.DataFrame([[item.n3() for item in row] for row in results], columns=['Answers'])
     
     def generate_and_ask(self, question, graph, endpoint='http://dbpedia.org/sparql'):
-        query = self.generate(question, graph)
+        query, constraints = self.generate(question, graph)
 
-        return self.ask(query, endpoint)
+        return self.ask(query, constraints, endpoint)
 
 
     def __generate_triple(self, Q, edge):
@@ -128,13 +139,16 @@ class QueryGenerator():
 
     # TODO: put here gabri's code to distinguish between different question types
     def __generate_head_and_tail(self, question, variable):
+        qustion_type = 'normal'
         print("Question: ", question)
         constraints = self.__constraint(question)
         print("Constraints: ", constraints)
         if "answer-type" in constraints:
             head = "ASK "
+            qustion_type = 'ask'
         elif "aggregation" in constraints:
             head = "SELECT ( COUNT ( DISTINCT "+ variable +") as ?count ) "
+            qustion_type = 'aggregation'
         else:
             head = "SELECT DISTINCT " + variable + " WHERE "
         
@@ -143,7 +157,7 @@ class QueryGenerator():
         else:'''
         tail = ""
         #tail = "\n"
-        return (head, tail)
+        return (head, tail, constraints)
 
 
 

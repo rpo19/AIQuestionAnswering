@@ -12,6 +12,7 @@ import { CodeMarkupModule } from 'src/app/shared/components/code-markup/code-mar
 import { GraphModule } from 'src/app/shared/components/graph/graph.module';
 import { TuiHostedDropdownModule } from '@taiga-ui/core';
 import { TuiRadioBlockModule } from '@taiga-ui/kit';
+import { TypeOfPipeModule } from 'src/app/shared/pipes/type-of.pipe';
 
 
 
@@ -37,7 +38,8 @@ import { TuiRadioBlockModule } from '@taiga-ui/kit';
     TuiDropdownControllerModule,
     TuiLinkModule,
     TuiRadioBlockModule,
-    TuiGroupModule
+    TuiGroupModule,
+    TypeOfPipeModule
   ],
   declarations: [AskerComponent],
   exports: [AskerComponent]

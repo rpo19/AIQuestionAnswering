@@ -41,22 +41,21 @@ def ask_kgqa():
         entities_copy = entities.copy()
 
         # query graph construction
-        # try:
-        Q = query_graph_builder.build(question, entities, texts, patterns[0])
-        # except Exception as e:
-        #     abort(500, description="Could not construct the query graph.")
+        try:
+            Q = query_graph_builder.build(question, entities, texts, patterns[0])
+        except Exception as e:
+            abort(500, description="Could not construct the query graph.")
 
         # build SPARQL query and retrieve answers
-        #try:
-        SPARQL_query = query_generator.generate(question, Q)
-        #except:
-        #    abort(500, description="Could not generate the SPARQL query.")
-        
         try:
-            answers_df = query_generator.ask(SPARQL_query)
+            SPARQL_query, constraints = query_generator.generate(question, Q)
         except:
-            abort(500, description="Could not query DBPedia.")
-        #answers_df = query_generator.generate_and_ask(question, Q)
+            abort(500, description="Could not generate the SPARQL query.")
+        
+        #try:
+        answers_df = query_generator.ask(Q, entities, SPARQL_query, constraints)
+        #except:
+        #    abort(500, description="Could not query DBPedia.")
 
         answers = answers_df['Answers'].values.tolist()
         return { 

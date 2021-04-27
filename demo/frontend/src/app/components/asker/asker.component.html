@@ -71,13 +71,19 @@
             </tr>
             <tr *ngFor="let answer of res.dataKGQA?.answers; let i = index" class="tui-table__tr">
               <td class="tui-table__td">{{i+1}}</td>
-              <td class="tui-table__td">
+              <td *ngIf="(answer | typeOf) !== 'boolean'; else answerType" class="tui-table__td">
                 <a *ngIf="answer.startsWith('&lt;http'); else literal" target="_blank"
                   [href]="answer | tuiMapper: getLink" tuiLink>{{answer}}</a>
                 <ng-template #literal>
                   {{answer}}
                 </ng-template>
               </td>
+              <!-- Answer type -->
+              <ng-template #answerType>
+                <td class="tui-table__td">
+                  {{answer ? 'Yes' : 'No'}}
+                </td>
+              </ng-template>
             </tr>
           </tbody>
         </table>
