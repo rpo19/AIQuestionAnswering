@@ -3,6 +3,10 @@ import pandas as pd
 import sparql
 import logging
 from tabulate import tabulate
+import nltk
+import re
+nltk.download('wordnet')
+from nltk.corpus import wordnet
 
 class QueryGenerator():
 
@@ -72,9 +76,70 @@ class QueryGenerator():
         # if we are here I made a wrong assumption lol
         return ' '.join(candidates)
 
+    # from ordinal number computes synonyms
+    def convert_ordinal_number(list_ordinal_num):
+        list_ordinal_syns=[]
+        for elem in list_ordinal_num:
+            list_ordinal_syns.append(wordnet.synsets(elem)[0].lemma_names())
+        return list_ordinal_syns
+
+    # compute first n ordinal numbers
+    def compute_ordinal_number(n=10):
+        ordinal = lambda num: "%d%s" % (num,"tsnrhtdd"[(num//10%10!=1)*(num%10<4)*num%10::4])
+        list_ordinal_number=[ordinal(i) for i in range(1,n)]
+        return convert_ordinal_number(list_ordinal_number)
+    
+    # check if the word is an ordinal number
+    def is_ordinal_number(word):
+        ordinal_numbers = compute_ordinal_number()
+        for elem in ordinal_numbers:
+            if word in elem:
+                return (True,elem)
+        return (False,[])
+    
+    # check if a list of tokens contains an ordinal number and return the corresponding value for the limit
+    def contain_ordinal_number(tokens):
+        for token in tokens:
+            check, number = is_ordinal_number(token)
+            if check:
+                return number[1][:-2]
+        return []
+    
+    # computes contraints for the question
+    def constraint(question):
+        category=[]
+        
+        question= re.sub(' +', ' ', question)
+        if "how many" in question or "number of" in question or "count of" in question:
+            category.append("aggregation") # count
+        
+        tokens = nltk.word_tokenize(question)
+        tags = [ elem[1] for elem in nltk.pos_tag(tokens)]
+        print(tags)
+        if "VB" in tags[0]:
+            category.append("answer-type") # ask
+        
+        '''ordinal_number = contain_ordinal_number(tokens)
+        if len(ordinal_number)>0:  
+            category.append("ordinal") # limit'''
+        return category, ordinal_number
+
     # TODO: put here gabri's code to distinguish between different question types
     def __generate_head_and_tail(self, question, variable):
-        head = "SELECT DISTINCT " + variable + " WHERE "
+        print("Question: ", question)
+        constraints, ordinal = constraint(question)
+        print("Constraints: ", constraints)
+        print("Ordinal: ", ordinal)
+        if "answer-type" in constraints:
+            head = "ASK "
+        elif "aggregation" in constraints:
+            head = "SELECT (count(distinct "+ variable +") as ?count) "
+        else:
+            head = "SELECT DISTINCT " + variable + " WHERE "
+        
+        '''if "ordinal" and type(ordinal) == str:
+            tail= "limit " + ordinal
+        else:'''
         tail = ""
         #tail = "\n"
         return (head, tail)
