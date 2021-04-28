@@ -1,5 +1,6 @@
 from transformers import pipeline
 import wikipediaapi
+from operator import itemgetter
 
 
 class FreeTextQA():
@@ -16,7 +17,7 @@ class FreeTextQA():
                 extract_format=wikipediaapi.ExtractFormat.WIKI
             )
 
-    def answerFromWiki(self, question, entity, debug=False): 
+    def answerFromWiki(self, question, entity, top=0, debug=False): 
         # check entity
         if len(entity) == 0:
                 return {'entity':'Entity not provided!', 'answer': None}
@@ -27,25 +28,24 @@ class FreeTextQA():
         # get flattened sections of the page
         sections = self.__flattenSections(p)
         # iterate on sections and find answer in each span
-        max_score = 0
-        best_answer = None
-
+        answers = []
         for section in sections:
-                # TODO: how to identify a smaller span? (check if it's necessary...)
-                # if subject in section.text: # look only in relevant sections???
                 context = section.text
                 if context != '':
                         answer = self.answerFromSpan(question=question, context=context)
-                        if answer['score'] > max_score:
-                                max_score = answer['score']
-                                best_answer = answer
-                                best_answer['entity'] = entity
-                                best_answer['section'] = section.title
+                        answer['entity'] = entity
+                        answer['section'] = section.title
+                        answers.append(answer)
                         if debug:
                                 tokens = self.__qa.tokenizer(context)['input_ids']
                                 print(section.title, f'(length: {len(tokens)}')
                                 print(f"Answer: '{answer['answer']}' with score {answer['score']}", '\n', 30*'_')
-        return best_answer
+        # order answers by descending score
+        ordered_answers = sorted(answers, key=itemgetter('score'), reverse=True)
+        # get only the top n
+        if top > 0:
+                ordered_answers = ordered_answers[:top]
+        return ordered_answers
 
     def answerFromSpan(self, question, context):
         return self.__qa(question, context)
