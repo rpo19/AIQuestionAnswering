@@ -15,7 +15,7 @@ qa = ftqa.FreeTextQA()
 dbpee = DBPediaEntityExtractor.DBPediaEntityExtractor()
 # %% extract wiki answers of a SQuAD sample
 # DO NOT RUN WITH TOO MUCH SAMPLES!!! COMPUTATIONAL SUICIDE!!!
-N_SAMPLES=5
+N_SAMPLES=8
 flatten_squad = pd.read_csv('../data/flatten_squad.csv')
 # TODO: not random sample, should be more appropriate selecting only P1?
 flatten_squad = flatten_squad.sample(N_SAMPLES, random_state=SEED)
@@ -49,7 +49,7 @@ flatten_squad[flatten_squad['resource'] == flatten_squad['wikiResource']]
 # %% extract wiki answers of a LC-QAD sample
 lc_quad = pd.read_json('../data/test-data-answers.json')
 # DO NOT RUN WITH TOO MUCH SAMPLES!!! COMPUTATIONAL SUICIDE!!!
-N_SAMPLES=5
+N_SAMPLES=8
 # TODO: not random sample, should be more appropriate selecting only P1?
 lc_quad = lc_quad.sample(N_SAMPLES, random_state=SEED)
 lc_quad['wikiAnswerInfo'] = lc_quad['question']\

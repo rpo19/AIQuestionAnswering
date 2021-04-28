@@ -41,8 +41,10 @@ class FreeTextQA():
                                 best_answer = answer
                                 best_answer['entity'] = entity
                                 best_answer['section'] = section.title
-                        if debug: print(section.title, f'(length: {len(context)})')
-                        if debug: print(f"Answer: '{answer['answer']}' with score {answer['score']}", '\n', 30*'_')
+                        if debug:
+                                tokens = self.__qa.tokenizer(context)['input_ids']
+                                print(section.title, f'(length: {len(tokens)}')
+                                print(f"Answer: '{answer['answer']}' with score {answer['score']}", '\n', 30*'_')
         return best_answer
 
     def answerFromSpan(self, question, context):

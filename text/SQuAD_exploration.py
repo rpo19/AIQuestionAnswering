@@ -18,7 +18,7 @@ for key, value in squad_train.iterrows():
         for paragraph in value['data']['paragraphs']:
                 for qas in paragraph['qas']:
                         count += 1
-                tmp = len(paragraph['context'])
+                tmp = len(paragraph['context'].split())
                 lengths.append(tmp)
 print('# entries: ',len(squad_train))      
 print('# questions: ', count)
@@ -38,7 +38,7 @@ for key, value in squad_test.iterrows():
         for paragraph in value['data']['paragraphs']:
                 for qas in paragraph['qas']:
                         count += 1
-                tmp = len(paragraph['context'])
+                tmp = len(paragraph['context'].split())
                 lengths.append(tmp)
 print('# entries: ',len(squad_test))      
 print('# questions: ', count)
