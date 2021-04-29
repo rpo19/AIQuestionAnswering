@@ -71,13 +71,27 @@ def ask_kgqa():
 @app.route("/api/ftqa", methods=['GET'])
 def ask_ftqa():
     question = request.args.get('q')
+    mode = request.args.get('mode')
+    print('Mode:',mode)
+    answers = []
+    answerType = mode
     if question:
-        # extract and link entities
-        entity, text = entity_extractor.extractMain(question)
-        # get answers from wikipedia
-        answers = free_text_answerer.answerFromWiki(question, entity)
+        if mode == 'NER and NEL':
+            # extract and link entities
+            entity, text = entity_extractor.extractMain(question)
+            print('Extracted entities:', entity)
+            print('Extracted texts:', text)
+            # get answers from wikipedia
+            answers = free_text_answerer.answerFromWiki(question, entity)
+        elif mode == 'Span of text':
+            span = request.args.get('span')
+            if span:
+                answers = free_text_answerer.answerFromSpan(question, span)
+                answers = [answers]
+        elif mode == 'Wikipedia search':
+            answers = free_text_answerer.answerFromWiki(question)
 
-    return {'answers': answers}
+    return {'answers': answers, 'answerType': answerType}
 
 if __name__ == '__main__':
     if os.environ.get("WERKZEUG_RUN_MAIN") == "true":

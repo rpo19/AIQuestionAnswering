@@ -1,5 +1,6 @@
 from transformers import pipeline
 import wikipediaapi
+import wikipedia as wiki
 from operator import itemgetter
 
 
@@ -17,14 +18,19 @@ class FreeTextQA():
                 extract_format=wikipediaapi.ExtractFormat.WIKI
             )
 
-    def answerFromWiki(self, question, entity, top=0, debug=False): 
-        # check entity
-        if len(entity) == 0:
-                return {'entity':'Entity not provided!', 'answer': None}
-        # extract resource name from entity
-        entity = entity.split('/')[-1].replace('>','')
-        # get wikipedia page
-        p = self.__wiki.page(entity)
+    def answerFromWiki(self, question, entity=None, top=0, debug=False): 
+        p = None
+        if entity:
+                # extract resource name from entity
+                entity = entity.split('/')[-1].replace('>','')
+                # get wikipedia page
+                p = self.__wiki.page(entity)
+        else:
+                # search page by question
+                results = wiki.search(question)
+                # get wikipedia page
+                p = self.__wiki.page(results[0])
+
         # get flattened sections of the page
         sections = self.__flattenSections(p)
         print('Number of sections:', len(sections))

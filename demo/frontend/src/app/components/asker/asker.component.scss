@@ -8,6 +8,13 @@
         flex-direction: column;
         //align-items: center;
 
+        .optional-conf {
+            .options {
+                display: flex;
+                flex-direction: column;
+            }
+        }
+
 
         .search {
             display: flex;

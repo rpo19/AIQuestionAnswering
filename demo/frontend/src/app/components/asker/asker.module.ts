@@ -2,7 +2,7 @@ import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AskerComponent } from './asker.component';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { TuiInputModule, TuiTagModule } from '@taiga-ui/kit';
+import { TuiInputModule, TuiTagModule, TuiTextAreaModule } from '@taiga-ui/kit';
 import { TuiDataListModule, TuiDropdownControllerModule, TuiDropdownModule, TuiGroupModule, TuiLinkModule, TuiLoaderModule, TuiSvgModule, TuiTextfieldControllerModule } from '@taiga-ui/core';
 import { TuiButtonModule } from '@taiga-ui/core';
 import { TuiHintModule } from '@taiga-ui/core';
@@ -13,6 +13,7 @@ import { GraphModule } from 'src/app/shared/components/graph/graph.module';
 import { TuiHostedDropdownModule } from '@taiga-ui/core';
 import { TuiRadioBlockModule } from '@taiga-ui/kit';
 import { TypeOfPipeModule } from 'src/app/shared/pipes/type-of.pipe';
+import { TuiDataListWrapperModule, TuiSelectModule} from '@taiga-ui/kit';
 
 
 
@@ -39,7 +40,10 @@ import { TypeOfPipeModule } from 'src/app/shared/pipes/type-of.pipe';
     TuiLinkModule,
     TuiRadioBlockModule,
     TuiGroupModule,
-    TypeOfPipeModule
+    TypeOfPipeModule,
+    TuiDataListWrapperModule,
+    TuiSelectModule,
+    TuiTextAreaModule
   ],
   declarations: [AskerComponent],
   exports: [AskerComponent]

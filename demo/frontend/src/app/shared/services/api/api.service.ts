@@ -15,8 +15,13 @@ export class ApiService {
 		return this._http.get<DataKGQA>(`${this._api}/api/kgqa?q=${question}`);
 	}
 
-	ask_ftqa(question: string): Observable<DataFTQA> {
-		return this._http.get<DataFTQA>(`${this._api}/api/ftqa?q=${question}`);
+	ask_ftqa(formValues: any): Observable<DataFTQA> {
+		let options = `&mode=${formValues.ftqaType}`
+		if (formValues.ftqaType === 'Span of text') {
+			options += `&span=${formValues.span}`
+		}
+		console.log(options)
+		return this._http.get<DataFTQA>(`${this._api}/api/ftqa?q=${formValues.question + options}`);
 	}
 
 }

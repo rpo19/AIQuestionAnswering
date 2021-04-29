@@ -10,6 +10,7 @@ import { catchError, debounceTime, distinctUntilChanged, filter, map, startWith,
 import { QuestionStoreService } from 'src/app/shared/services/local-storage/question-store.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { TuiDestroyService } from '@taiga-ui/cdk';
+import { floor } from '@taiga-ui/cdk';
 
 @Component({
   selector: 'app-asker',
@@ -33,11 +34,22 @@ export class AskerComponent implements OnInit {
 
   // keeps track of dropdown status
   openDropdown = false;
+
+  optionsFTQA = [
+    'NER and NEL',
+    'Span of text',
+    'Wikipedia search'
+  ];
+
+
   // search form
   searchForm = new FormGroup({
     question: new FormControl(''),
-    type: new FormControl('kgqa')
+    type: new FormControl('kgqa'),
+    ftqaType: new FormControl(this.optionsFTQA[0]),
+    span: new FormControl('')
   });
+
 
 
   constructor(
@@ -92,6 +104,13 @@ export class AskerComponent implements OnInit {
   }
 
   /**
+  * Getter type form control
+  */
+  get ftqaType(): FormControl {
+    return this.searchForm.get('ftqaType') as FormControl;
+  }
+
+  /**
    * Handle ask
    */
   handleAsk(question: string): void {
@@ -107,7 +126,8 @@ export class AskerComponent implements OnInit {
       } else {
         // retrieve answer for ftqa
         this.dataKGQA$ = of(null);
-        this.dataFTQA$ = this._api.ask_ftqa(this.searchForm.value.question).pipe(
+
+        this.dataFTQA$ = this._api.ask_ftqa(this.searchForm.value).pipe(
           catchError((err: HttpErrorResponse) => {
             return this._notificationsService.show(err.error.error, { status: TuiNotification.Error })
           }),
@@ -148,6 +168,14 @@ export class AskerComponent implements OnInit {
    */
   getLink(resource: string): string {
     return resource.split('<')[1].split('>')[0];
+  }
+
+  round(value: number): number {
+    return floor(value, 3);
+  }
+
+  transformSectionLink(section: string): string {
+    return section.replaceAll(' ', '_',);
   }
 
 }

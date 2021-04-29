@@ -15,6 +15,23 @@
       </tui-radio-block>
     </div>
 
+    <div class="optional-conf tui-space_bottom-3">
+      <ng-container *ngIf="type.value === 'ftqa'">
+        <div class="options">
+          <tui-select formControlName="ftqaType" [tuiTextfieldLabelOutside]="true" tuiTextfieldSize="s" class="tui-space_bottom-3">
+            <tui-data-list-wrapper *tuiDataList [items]="optionsFTQA"></tui-data-list-wrapper>
+          </tui-select>
+
+          <tui-text-area *ngIf="ftqaType.value === 'Span of text'" formControlName="span" tuiTextfieldSize="m" tuiTextfieldAutocomplete="off"
+          spellcheck="false">
+            Insert the span of text
+          </tui-text-area>
+        </div>
+      </ng-container>
+    </div>
+
+
+
     <div class="search">
       <tui-hosted-dropdown [content]="dropdown" [(open)]="openDropdown" tuiDropdownLimitWidth="fixed">
         <tui-input [tuiTextfieldLabelOutside]="true" formControlName="question" tuiTextfieldAutocomplete="off"
@@ -99,9 +116,10 @@
             <tr class="tui-table__tr">
               <th class="tui-table__th">N.</th>
               <th class="tui-table__th">Answer</th>
-              <th class="tui-table__th">Section</th>
+              <th class="tui-table__th">Score</th>
+              <th *ngIf="res.dataFTQA.answerType !== 'Span of text'" class="tui-table__th">Section</th>
               <th class="tui-table__th">Span</th>
-              <th class="tui-table__th"></th>
+              <th *ngIf="res.dataFTQA.answerType !== 'Span of text'" class="tui-table__th"></th>
             </tr>
             <tr *ngFor="let answer of res.dataFTQA?.answers; let i = index" class="tui-table__tr">
               <td class="tui-table__td">{{i+1}}</td>
@@ -109,13 +127,16 @@
                 {{answer.answer}}
               </td>
               <td class="tui-table__td">
+                {{answer.score | tuiMapper: round}}
+              </td>
+              <td *ngIf="res.dataFTQA.answerType !== 'Span of text'" class="tui-table__td">
                 {{answer.section}}
               </td>
               <td class="tui-table__td">
                 {{answer.start}} - {{answer.end}}
               </td>
-              <td class="tui-table__td">
-                <a tuiLink [href]="'https://en.wikipedia.org/wiki/' + answer.entity + '#' + answer.section">
+              <td *ngIf="res.dataFTQA.answerType !== 'Span of text'" class="tui-table__td">
+                <a tuiLink [href]="'https://en.wikipedia.org/wiki/' + answer.entity + '#' + (answer.section | tuiMapper: transformSectionLink)">
                   <tui-svg src="tuiIconArrowUpRight"></tui-svg>
                 </a>
               </td>

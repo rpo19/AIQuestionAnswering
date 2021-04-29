@@ -11,6 +11,7 @@ export interface DataKGQA {
 
 export interface DataFTQA {
     answers: AnswerFTQA[];
+    answerType: string;
 }
 
 export interface AnswerFTQA {
@@ -18,5 +19,6 @@ export interface AnswerFTQA {
     section: string;
     start: number;
     end: number;
+    score: number;
     entity: string;
 }
