@@ -20,7 +20,7 @@ flatten_squad = pd.read_csv('../data/flatten_squad.csv')
 # TODO: not random sample, should be more appropriate selecting only P1?
 flatten_squad = flatten_squad.sample(N_SAMPLES, random_state=SEED)
 flatten_squad['wikiAnswerInfo'] = flatten_squad['question']\
-        .apply(lambda x: qa.answerFromWiki(x, dbpee.extractLast(x)[0], True))
+        .apply(lambda x: qa.answerFromWiki(x, dbpee.extractMain(x)[0], True))
 #flattend_squad.to_csv('../data/flatten_squad_wikianswers.csv', index=False)
 # %% clean wiki answers
 #flatten_squad = pd.read_csv('../data/flatten_squad_wikianswers.csv')
@@ -53,7 +53,7 @@ N_SAMPLES=8
 # TODO: not random sample, should be more appropriate selecting only P1?
 lc_quad = lc_quad.sample(N_SAMPLES, random_state=SEED)
 lc_quad['wikiAnswerInfo'] = lc_quad['question']\
-        .apply(lambda x: qa.answerFromWiki(x, dbpee.extractLast(x)[0], True))
+        .apply(lambda x: qa.answerFromWiki(x, dbpee.extractMain(x)[0], True))
 #lc_quad.to_csv('../data/lc_quad_wikianswers.csv', index=False)
 
 # %% clean wiki answers

@@ -5,7 +5,7 @@ DBPediaEntityExtractor = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = DBPediaEntityExtractor 
 spec.loader.exec_module(DBPediaEntityExtractor)
 # %%
-dbpee = DBPediaEntityExtractor.DBPediaEntityExtractor()
+dbpee = DBPediaEntityExtractor.DBPediaEntityExtractor(mode="custom")
 nlp = dbpee.nlp
 # %%
 # q = "What did Barack Obama's wife say about Adolf Hitler's Germany?"
@@ -21,6 +21,6 @@ for chunk in doc.noun_chunks:
 print('*'*25)
 print('MAIN:', dbpee.extractMain(q))
 print('LAST:', dbpee.extractLast(q))
-print('ALL:', dbpee.extract_v2(q))
+print('ALL:', dbpee.extract(q))
 
 # %%

@@ -177,11 +177,11 @@ class DBPediaEntityExtractor():
     
     def extract(self, text):
         if self.mode == 'spotlight':
-            return self.__spotlight_extract(text)
+            return self.__spotlight_extract_v2(text)
         elif self.mode == 'custom':
             return self.__extract_custom(text)
 
-    def extract_v2(self, text):
+    def __spotlight_extract_v2(self, text):
         # possessive forms may induce problems
         text = text.replace('\'s ', ' ')
         # execute NER and NEL
@@ -213,17 +213,22 @@ class DBPediaEntityExtractor():
 
         return filtered_ents_uri, filtered_ents_text
 
-    # returns only the last entity
+    """
+    Extract only the last entity
+    """
     def extractLast(self, text):
-        ents = self.extract_v2(text)
+        ents = self.__spotlight_extract_v2(text)
         if len(ents[0]) > 0:
             return ents[0][-1], ents[1][-1]
         else:
             return ents
 
+    """
+    Extract only the main entity
+    """
     def extractMain(self, text):
         # extract entities
-        ents = self.extract_v2(text)
+        ents = self.__spotlight_extract_v2(text)
         # extract tagged noun chunks
         disable = ['dbpedia_spotlight']
         doc = self.nlp(text, disable=disable)
