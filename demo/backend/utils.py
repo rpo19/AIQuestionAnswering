@@ -7,9 +7,10 @@ from knowledgeGraph.kgqalib.dbpediaNEL.DBPediaEntityExtractor import DBPediaEnti
 from knowledgeGraph.kgqalib.patternBuilder.SQPBuilder import SQPBuilder
 from knowledgeGraph.kgqalib.queryGraphBuilder.QueryGraphBuilder import QueryGraphBuilder
 from knowledgeGraph.kgqalib.queryGenerator.QueryGenerator import QueryGenerator
+from text.ftqalib.ftqa.FreeTextQA import FreeTextQA
 import knowledgeGraph.kgqalib.shared.utils as utils
 
-def load_models():
+def load_models_kgqa():
     MODEL_PATH = './data/models/pattern_classifier.h5'
     EMBEDDINGS_PATH = './data/glove.840B.300d.gensim'
     GRAPH_BUILDER_MODE = 'glove' # 'glove' | 'stacked' | 'sentence_roberta'
@@ -30,6 +31,10 @@ def load_models():
     query_generator = QueryGenerator()
 
     return pattern_classifier, entity_extractor, query_graph_builder, query_generator
+
+def load_models_ftqa():
+    free_text_answerer = FreeTextQA()
+    return free_text_answerer
 
 def to_dict_of_dicts(Q):
     edge_list = nx.to_dict_of_lists(Q)

@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@angular/core';
 import { TOKENAPI } from '../../../tokens/token-api';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { DataKGQA } from '../../models/data';
+import { DataFTQA, DataKGQA } from '../../models/data';
 
 @Injectable({
     providedIn: 'root'
@@ -13,6 +13,10 @@ export class ApiService {
 	
     ask_kgqa(question: string): Observable<DataKGQA> {
 		return this._http.get<DataKGQA>(`${this._api}/api/kgqa?q=${question}`);
+	}
+
+	ask_ftqa(question: string): Observable<DataFTQA> {
+		return this._http.get<DataFTQA>(`${this._api}/api/ftqa?q=${question}`);
 	}
 
 }

@@ -5,7 +5,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),'../..'))
 from flask import Flask
 from flask_cors import CORS
 
-from utils import load_models, to_dict_of_dicts
+from utils import load_models_kgqa, load_models_ftqa, to_dict_of_dicts
 from flask import request, abort, jsonify
 
 
@@ -70,10 +70,18 @@ def ask_kgqa():
 
 @app.route("/api/ftqa", methods=['GET'])
 def ask_ftqa():
-    # free-text question answering
-    return
+    question = request.args.get('q')
+    if question:
+        # extract and link entities
+        entity, text = entity_extractor.extractMain(question)
+        # get answers from wikipedia
+        answers = free_text_answerer.answerFromWiki(question, entity)
+
+    return {'answers': answers}
 
 if __name__ == '__main__':
     if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
-        pattern_classifier, entity_extractor, query_graph_builder, query_generator = load_models()
+        pattern_classifier, entity_extractor, query_graph_builder, query_generator = load_models_kgqa()
+        free_text_answerer = load_models_ftqa()
+
     app.run(debug=True)

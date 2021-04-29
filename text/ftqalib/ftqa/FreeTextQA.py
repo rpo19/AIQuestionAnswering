@@ -27,8 +27,10 @@ class FreeTextQA():
         p = self.__wiki.page(entity)
         # get flattened sections of the page
         sections = self.__flattenSections(p)
+        print('Number of sections:', len(sections))
         # iterate on sections and find answer in each span
         answers = []
+        print('Answering from sections...')
         for section in sections:
                 context = section.text
                 if context != '':

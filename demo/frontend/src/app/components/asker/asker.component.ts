@@ -5,7 +5,7 @@ import { PolymorpheusTemplate } from '@tinkoff/ng-polymorpheus';
 import { Observable, of } from 'rxjs';
 import { ApiService } from 'src/app/shared/services/api/api.service';
 import { LoaderService } from 'src/app/shared/services/loader/loader.service';
-import { DataKGQA } from 'src/app/shared/models/data';
+import { DataFTQA, DataKGQA } from 'src/app/shared/models/data';
 import { catchError, debounceTime, distinctUntilChanged, filter, map, startWith, switchMapTo, takeUntil, tap } from 'rxjs/operators';
 import { QuestionStoreService } from 'src/app/shared/services/local-storage/question-store.service';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -22,6 +22,8 @@ export class AskerComponent implements OnInit {
 
   // emits responses from kgqa
   dataKGQA$: Observable<DataKGQA | void>;
+  // emits responses from ftqa
+  dataFTQA$: Observable<DataFTQA | void>;
   // emit loading status on request
   loading$: Observable<boolean>;
   // emit previous questions stored in the local storage
@@ -95,6 +97,7 @@ export class AskerComponent implements OnInit {
   handleAsk(question: string): void {
     if (question) {
       if (this.type.value === 'kgqa') {
+        this.dataFTQA$ = of(null);
         this.dataKGQA$ = this._api.ask_kgqa(this.searchForm.value.question).pipe(
           catchError((err: HttpErrorResponse) => {
             return this._notificationsService.show(err.error.error, { status: TuiNotification.Error })
@@ -104,6 +107,12 @@ export class AskerComponent implements OnInit {
       } else {
         // retrieve answer for ftqa
         this.dataKGQA$ = of(null);
+        this.dataFTQA$ = this._api.ask_ftqa(this.searchForm.value.question).pipe(
+          catchError((err: HttpErrorResponse) => {
+            return this._notificationsService.show(err.error.error, { status: TuiNotification.Error })
+          }),
+          tap(() => this._questionStoreService.set('questions', this.question.value))
+        );
       }
       this.firstTime = false;
     }

@@ -1,5 +1,6 @@
 <ng-container *ngIf="{
     dataKGQA: dataKGQA$ | async,
+    dataFTQA: dataFTQA$ | async,
     loading: loading$ | async
   } as res">
 
@@ -10,7 +11,7 @@
         Knowledge base question answering
       </tui-radio-block>
       <tui-radio-block contentAlign="right" formControlName="type" item="ftqa" size="s">
-        Free text question answering 
+        Free text question answering
       </tui-radio-block>
     </div>
 
@@ -43,59 +44,88 @@
   <div class="wrapper">
     <tui-loader *ngIf="!firstTime" [overlay]="true" [showLoader]="res.loading && !mouseenter">
       <!-- GRAPH -->
-      <ng-container *ngIf="res.dataKGQA">
-        <div *ngIf="type.value === 'kgqa'" class="container">
-          <tui-tag [value]="'Classified pattern:' + res.dataKGQA.pattern" size="s"></tui-tag>
-          <button class="btn-code" tuiButton appearance="flat" icon="tuiIconCode" size="s"
-            (click)="openDialog(dialogTemplate)">
-            SPARQL
-          </button>
+      <ng-container *ngIf="type.value === 'kgqa'; else ftqa">
+        <ng-container *ngIf="res.dataKGQA">
+          <div class="container">
+            <tui-tag [value]="'Classified pattern:' + res.dataKGQA.pattern" size="s"></tui-tag>
+            <button class="btn-code" tuiButton appearance="flat" icon="tuiIconCode" size="s"
+              (click)="openDialog(dialogTemplate)">
+              SPARQL
+            </button>
 
-          <ng-template #dialogTemplate="polymorpheus" polymorpheus let-observer>
-            <div class="tui-text_h6 tui-space_bottom-3">Generated SPARQL query</div>
-            <div class="tui-text_body-l tui-space_bottom-3">From the generated graph we can build a SPARQL query to
-              retrieve
-              the answers to the orginal question.</div>
-            <app-code-markup [content]="res.dataKGQA.query"></app-code-markup>
-          </ng-template>
+            <ng-template #dialogTemplate="polymorpheus" polymorpheus let-observer>
+              <div class="tui-text_h6 tui-space_bottom-3">Generated SPARQL query</div>
+              <div class="tui-text_body-l tui-space_bottom-3">From the generated graph we can build a SPARQL query to
+                retrieve
+                the answers to the orginal question.</div>
+              <app-code-markup [content]="res.dataKGQA.query"></app-code-markup>
+            </ng-template>
 
-          <app-graph [graph]="res.dataKGQA.graph"></app-graph>
-        </div>
+            <app-graph [graph]="res.dataKGQA.graph"></app-graph>
+          </div>
 
-        <!-- ANSWSERS TABLE -->
-        <table *ngIf="type.value === 'kgqa'; else ftqa" class="tui-table">
+          <!-- ANSWSERS TABLE -->
+          <table *ngIf="type.value === 'kgqa'; else ftqa" class="tui-table">
+            <tbody>
+              <tr class="tui-table__tr">
+                <th class="tui-table__th">N.</th>
+                <th class="tui-table__th">Answer</th>
+              </tr>
+              <tr *ngFor="let answer of res.dataKGQA?.answers; let i = index" class="tui-table__tr">
+                <td class="tui-table__td">{{i+1}}</td>
+                <td *ngIf="(answer | typeOf) !== 'boolean'; else answerType" class="tui-table__td">
+                  <a *ngIf="answer.startsWith('&lt;http'); else literal" target="_blank"
+                    [href]="answer | tuiMapper: getLink" tuiLink>{{answer}}</a>
+                  <ng-template #literal>
+                    {{answer}}
+                  </ng-template>
+                </td>
+                <!-- Answer type -->
+                <ng-template #answerType>
+                  <td class="tui-table__td">
+                    {{answer ? 'Yes' : 'No'}}
+                  </td>
+                </ng-template>
+              </tr>
+            </tbody>
+          </table>
+        </ng-container>
+      </ng-container>
+
+
+      <ng-template #ftqa>
+        <table *ngIf="res.dataFTQA" class="tui-table">
           <tbody>
             <tr class="tui-table__tr">
               <th class="tui-table__th">N.</th>
               <th class="tui-table__th">Answer</th>
+              <th class="tui-table__th">Section</th>
+              <th class="tui-table__th">Span</th>
+              <th class="tui-table__th"></th>
             </tr>
-            <tr *ngFor="let answer of res.dataKGQA?.answers; let i = index" class="tui-table__tr">
+            <tr *ngFor="let answer of res.dataFTQA?.answers; let i = index" class="tui-table__tr">
               <td class="tui-table__td">{{i+1}}</td>
-              <td *ngIf="(answer | typeOf) !== 'boolean'; else answerType" class="tui-table__td">
-                <a *ngIf="answer.startsWith('&lt;http'); else literal" target="_blank"
-                  [href]="answer | tuiMapper: getLink" tuiLink>{{answer}}</a>
-                <ng-template #literal>
-                  {{answer}}
-                </ng-template>
+              <td class="tui-table__td">
+                {{answer.answer}}
               </td>
-              <!-- Answer type -->
-              <ng-template #answerType>
-                <td class="tui-table__td">
-                  {{answer ? 'Yes' : 'No'}}
-                </td>
-              </ng-template>
+              <td class="tui-table__td">
+                {{answer.section}}
+              </td>
+              <td class="tui-table__td">
+                {{answer.start}} - {{answer.end}}
+              </td>
+              <td class="tui-table__td">
+                <a tuiLink [href]="'https://en.wikipedia.org/wiki/' + answer.entity + '#' + answer.section">
+                  <tui-svg src="tuiIconArrowUpRight"></tui-svg>
+                </a>
+              </td>
             </tr>
           </tbody>
         </table>
+      </ng-template>
 
-        <ng-template #ftqa>
-
-        </ng-template>
-      </ng-container>
     </tui-loader>
   </div>
 
 
 </ng-container>
-
-
