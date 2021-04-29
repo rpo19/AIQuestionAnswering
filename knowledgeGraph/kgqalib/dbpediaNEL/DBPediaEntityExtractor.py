@@ -18,8 +18,7 @@ class DBPediaEntityExtractor():
         if mode == 'spotlight':
             # load model and keep only ner
             print('Loading \'en_core_web_lg\' model...')
-            self.nlp = spacy.load('en_core_web_lg', 
-                            disable=['tok2vec', 'tagger', 'parser', 'attribute_ruler', 'lemmatizer'])
+            self.nlp = spacy.load('en_core_web_lg')
             # add dbpedia-spotlight stage
             self.nlp.add_pipe('dbpedia_spotlight', config={'overwrite_ents': True})
         elif mode == 'custom':
@@ -154,7 +153,8 @@ class DBPediaEntityExtractor():
         # possessive forms may induce problems
         text = text.replace('\'s ', ' ')
         # execute NER and NEL
-        doc = self.nlp(text)
+        disable = ['tok2vec', 'tagger', 'parser', 'attribute_ruler', 'lemmatizer']
+        doc = self.nlp(text, disable=disable)
         nel_ents = doc.spans['dbpedia_ents']        
         # filter entities
         filtered_ents_uri = []
@@ -185,7 +185,8 @@ class DBPediaEntityExtractor():
         # possessive forms may induce problems
         text = text.replace('\'s ', ' ')
         # execute NER and NEL
-        doc = self.nlp(text)
+        disable = ['tok2vec', 'tagger', 'parser', 'attribute_ruler', 'lemmatizer']
+        doc = self.nlp(text, disable=disable)
         nel_ents = doc.spans['dbpedia_ents']
         # filter entities
         filtered_ents_uri = []
@@ -215,6 +216,27 @@ class DBPediaEntityExtractor():
     # returns only the last entity
     def extractLast(self, text):
         ents = self.extract_v2(text)
+        if len(ents[0]) > 0:
+            return ents[0][-1], ents[1][-1]
+        else:
+            return ents
+
+    def extractMain(self, text):
+        # extract entities
+        ents = self.extract_v2(text)
+        # extract tagged noun chunks
+        disable = ['dbpedia_spotlight']
+        doc = self.nlp(text, disable=disable)
+        # search for main entity
+        previous_dep_ = None
+        for chunk in doc.noun_chunks:
+            # main entity appears as subject or propositional/direct object next to a subject
+            if chunk.root.dep_ == 'nsubj' or (chunk.root.dep_ in ['pobj', 'dobj'] and previous_dep_ == 'nsubj'):
+                for i, ent in enumerate(ents[1]):
+                    if ent in chunk.text or chunk.text in ent:
+                        return ents[0][i], ent
+            previous_dep_ = chunk.root.dep_
+        # return last entity in case of no main entity found
         if len(ents[0]) > 0:
             return ents[0][-1], ents[1][-1]
         else:
