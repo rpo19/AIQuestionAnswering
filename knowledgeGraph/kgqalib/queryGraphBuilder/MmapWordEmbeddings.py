@@ -1,6 +1,13 @@
 from pathlib import Path
 import gensim
 from flair.embeddings import WordEmbeddings, TokenEmbeddings
+from flair.file_utils import instance_lru_cache
+import torch
+from typing import List
+from flair.data import Sentence
+import flair
+import re
+import numpy as np
 class MmapWordEmbeddings(WordEmbeddings):
     """
     Adapted from https://github.com/flairNLP/flair/blob/v0.8/flair/embeddings/token.py
@@ -93,3 +100,57 @@ class MmapWordEmbeddings(WordEmbeddings):
 
         self.__embedding_length: int = self.precomputed_word_embeddings.vector_size
         TokenEmbeddings.__init__(self)
+
+
+    @property
+    def embedding_length(self) -> int:
+        return self.__embedding_length
+
+    @instance_lru_cache(maxsize=10000, typed=False)
+    def get_cached_vec(self, word: str) -> torch.Tensor:
+        if word in self.precomputed_word_embeddings:
+            word_embedding = self.precomputed_word_embeddings[word]
+        elif word.lower() in self.precomputed_word_embeddings:
+            word_embedding = self.precomputed_word_embeddings[word.lower()]
+        elif re.sub(r"\d", "#", word.lower()) in self.precomputed_word_embeddings:
+            word_embedding = self.precomputed_word_embeddings[
+                re.sub(r"\d", "#", word.lower())
+            ]
+        elif re.sub(r"\d", "0", word.lower()) in self.precomputed_word_embeddings:
+            word_embedding = self.precomputed_word_embeddings[
+                re.sub(r"\d", "0", word.lower())
+            ]
+        else:
+            word_embedding = np.zeros(self.embedding_length, dtype="float")
+
+        word_embedding = torch.tensor(
+            word_embedding.tolist(), device=flair.device, dtype=torch.float
+        )
+        return word_embedding
+
+    def _add_embeddings_internal(self, sentences: List[Sentence]) -> List[Sentence]:
+
+        for i, sentence in enumerate(sentences):
+
+            for token, token_idx in zip(sentence.tokens, range(len(sentence.tokens))):
+
+                if "field" not in self.__dict__ or self.field is None:
+                    word = token.text
+                else:
+                    word = token.get_tag(self.field).value
+
+                word_embedding = self.get_cached_vec(word=word)
+
+                token.set_embedding(self.name, word_embedding)
+
+        return sentences
+
+    def __str__(self):
+        return self.name
+
+    def extra_repr(self):
+        # fix serialized models
+        if "embeddings" not in self.__dict__:
+            self.embeddings = self.name
+
+        return f"'{self.embeddings}'"

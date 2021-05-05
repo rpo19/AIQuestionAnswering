@@ -20,14 +20,15 @@ class DBPediaEntityExtractor():
             print('Loading \'en_core_web_lg\' model...')
             self.nlp = spacy.load('en_core_web_lg')
             # add dbpedia-spotlight stage
-            self.nlp.add_pipe('dbpedia_spotlight', config={'overwrite_ents': True})
+            # overwrite_ents = False means we have to use doc.spans['dbpedia_ents']
+            self.nlp.add_pipe('dbpedia_spotlight', config={'overwrite_ents': False})
         elif mode == 'custom':
             print('Loading flair NER models...')
             # load NER model
             self.tagger = SequenceTagger.load('ner-fast')
             # load sentence embedding model
             self.embedding = SentenceTransformerDocumentEmbeddings('bert-base-nli-mean-tokens')
-    
+
     """
     Get text sentence level embedding.
     """
@@ -35,18 +36,18 @@ class DBPediaEntityExtractor():
         sentence = Sentence(text)
         self.embedding.embed(sentence)
         return sentence.embedding.tolist()
-    
+
     """
     Extract entities from text.
     """
     def __extract_entities(self, text):
         sentence = Sentence(text)
         self.tagger.predict(sentence)
-        
+
         entities = sentence.to_dict(tag_type='ner')['entities']
         entities = [entity['text'] for entity in entities]
         return entities
-    
+
     """
     Create tuples from a list with overlapping elements.
     (e.g: [1,2,3] -> [(1,2), (2,3)])
@@ -71,7 +72,7 @@ class DBPediaEntityExtractor():
                 if 'ENTITY' in group:
                     extended_entities.append(' '.join(group).replace('ENTITY', phr))
         return extended_entities
-    
+
     """
     Get query lookup results.
     """
@@ -79,7 +80,7 @@ class DBPediaEntityExtractor():
         res = requests.get(f'https://lookup.dbpedia.org/api/search?query={phr}&maxResults=10&format=JSON_RAW')
         docs = eval(res.text)['docs']
         return docs
-    
+
     """
     Compute relevance between entity phrase and candidate entity.
     score = alfa1 * importance + alfa2 * lev_distance + alfa3 * cos_sim
@@ -88,10 +89,10 @@ class DBPediaEntityExtractor():
         # TODO: compute importance
         # can we use the relevance or simply the rank of results from lookup?
         importance = 1 / rank
-        
+
         # compute lev distance
         lev_distance = 1 / (levenshtein_distance(phr, candidate_entity['label'][0]) + 1)
-        
+
         # compute relevance with doc embedding
         if 'comment' in candidate_entity:
             doc__entity_embedding = self.__get_text_embedding(candidate_entity['comment'][0])
@@ -101,27 +102,27 @@ class DBPediaEntityExtractor():
 
         score = alfa1 * importance + alfa2 * lev_distance + alfa3 * cos_sim
         return score
-    
+
     """
     Extract and link entities from a text as described from the paper.
     """
     def __extract_custom(self, text, max_len = 3):
         text = text.replace('?', ' ?')
-    
+
         entities_URIs = []
         entities_texts = []
         entities_scores = []
-        
+
         # get text embedding
         text_embedding = self.__get_text_embedding(text)
-        
+
         # extract entities from question
         entity_phrases = self.__extract_entities(text)
-        
+
         # iterate for each extracted entity
         for i, phr in enumerate(entity_phrases):
             candidate_entity_phrase = {'phr': phr, 'candidate_entity': None, 'score': 0}
-            
+
             # extend extracted entities
             PX = self.__extend_entity(text, phr, max_len)
             EC = []
@@ -139,11 +140,11 @@ class DBPediaEntityExtractor():
                 if tmp_score > candidate_entity_phrase['score']:
                     candidate_entity_phrase['candidate_entity'] = candidate_entity
                     candidate_entity_phrase['score'] = tmp_score
-            
+
             entities_URIs.append('<'+candidate_entity_phrase['candidate_entity']['resource'][0]+'>')
             entities_texts.append(candidate_entity_phrase['phr'])
             entities_scores.append(candidate_entity_phrase['score'])
-                
+
         return entities_URIs, entities_texts, entities_scores
 
     """
@@ -155,7 +156,7 @@ class DBPediaEntityExtractor():
         # execute NER and NEL
         disable = ['tok2vec', 'tagger', 'parser', 'attribute_ruler', 'lemmatizer']
         doc = self.nlp(text, disable=disable)
-        nel_ents = doc.spans['dbpedia_ents']        
+        nel_ents = doc.spans['dbpedia_ents']
         # filter entities
         filtered_ents_uri = []
         filtered_ents_text = []
@@ -172,9 +173,9 @@ class DBPediaEntityExtractor():
                 # no NER ents, keep all the dbpedia-spotlight ones
                 filtered_ents_uri.append('<'+nel_ent.kb_id_+'>')
                 filtered_ents_text.append(nel_ent.text)
-        
+
         return filtered_ents_uri, filtered_ents_text
-    
+
     def extract(self, text):
         if self.mode == 'spotlight':
             return self.__spotlight_extract_v2(text)
@@ -188,6 +189,7 @@ class DBPediaEntityExtractor():
         disable = ['tok2vec', 'tagger', 'parser', 'attribute_ruler', 'lemmatizer']
         doc = self.nlp(text, disable=disable)
         nel_ents = doc.spans['dbpedia_ents']
+
         # filter entities
         filtered_ents_uri = []
         filtered_ents_text = []
@@ -197,15 +199,16 @@ class DBPediaEntityExtractor():
                 filtered_ents_text.append(nel_ent.text)
             else:
                 try:
-                    ner_ents = doc.spans['ents_original']
+                    ner_ents = doc.spans['ents_original'] if 'ents_original' in doc.spans else doc.ents
                     for ner_ent in ner_ents:
                         # keep only entities extracted with both spacy's NER and dbpedia-spotlight
                         if ner_ent.text == nel_ent.text:
                             filtered_ents_uri.append('<'+nel_ent.kb_id_+'>')
                             filtered_ents_text.append(nel_ent.text)
-                except:
+                except Exception as e:
+                    print('Got exception', e)
                     continue
-        # if filter was too strict it's ok to keep all entities        
+        # if filter was too strict it's ok to keep all entities
         if len(filtered_ents_uri) == 0:
             for nel_ent in nel_ents:
                 filtered_ents_uri.append('<'+nel_ent.kb_id_+'>')

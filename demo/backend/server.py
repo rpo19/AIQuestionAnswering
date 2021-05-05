@@ -7,6 +7,7 @@ from flask_cors import CORS
 
 from utils import load_models_kgqa, load_models_ftqa, to_dict_of_dicts
 from flask import request, abort, jsonify
+import traceback
 
 
 app = Flask(__name__)
@@ -28,7 +29,9 @@ def ask_kgqa():
         try:
             patterns, raw_probs = pattern_classifier.transform(question)
             print('Pattern:', patterns[0])
-        except:
+        except Exception as e:
+            traceback.print_exc()
+            print(e)
             abort(500, description="Pattern could not be classified.")
 
         # extract and link entities
@@ -36,7 +39,8 @@ def ask_kgqa():
         print('Extracted entities:', entities)
         print('Extracted texts:', texts)
         if not entities:
-            abort(500, description="Could not identify any entity.")
+            print("Could not identify any entity.")
+            abort(404, description="Could not identify any entity.")
 
         entities_copy = entities.copy()
 
@@ -44,28 +48,32 @@ def ask_kgqa():
         try:
             Q = query_graph_builder.build(question, entities, texts, patterns[0])
         except Exception as e:
+            traceback.print_exc()
+            print(e)
             abort(500, description="Could not construct the query graph.")
 
         # build SPARQL query and retrieve answers
         try:
             SPARQL_query, constraints = query_generator.generate(question, Q)
-        except:
+        except Exception as e:
+            traceback.print_exc()
+            print(e)
             abort(500, description="Could not generate the SPARQL query.")
-        
+
         #try:
         answers_df = query_generator.ask(Q, entities, SPARQL_query, constraints)
         #except:
         #    abort(500, description="Could not query DBPedia.")
 
         answers = answers_df['Answers'].values.tolist()
-        return { 
-            'pattern': patterns[0], 
-            'entities': entities_copy, 
-            'graph': to_dict_of_dicts(Q), 
+        return {
+            'pattern': patterns[0],
+            'entities': entities_copy,
+            'graph': to_dict_of_dicts(Q),
             'query': SPARQL_query,
-            'answers': answers 
+            'answers': answers
         }
-    
+
     abort(400, description="Query cannot be empty.")
 
 @app.route("/api/ftqa", methods=['GET'])
