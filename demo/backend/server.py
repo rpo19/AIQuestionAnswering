@@ -40,7 +40,7 @@ def ask_kgqa():
         print('Extracted texts:', texts)
         if not entities:
             print("Could not identify any entity.")
-            abort(404, description="Could not identify any entity.")
+            abort(500, description="Could not identify any entity.")
 
         entities_copy = entities.copy()
 
