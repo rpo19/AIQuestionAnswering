@@ -20,6 +20,10 @@ flair.cache_root = Path('./data/flair')
 from flair.data import Sentence
 from flair.embeddings import SentenceTransformerDocumentEmbeddings
 from flair.embeddings import WordEmbeddings, FlairEmbeddings, StackedEmbeddings
+import sys
+
+from .MmapWordEmbeddings import MmapWordEmbeddings
+
 
 class QueryGraphBuilder():
     def __init__(self, embeddings=None, path_to_embeddings='../../data/glove.twitter.27B.200d.pickle',
@@ -31,7 +35,12 @@ class QueryGraphBuilder():
             if mode == 'glove':
                 try:
                     # glove 840B-300d
-                    self.embeddings= WordEmbeddings(path_to_embeddings)
+                    if sys.platform == 'linux':
+                        # pro linux users use mmap to save RAM
+                        self.embeddings= MmapWordEmbeddings(path_to_embeddings)
+                    else:
+                        self.embeddings= WordEmbeddings(path_to_embeddings)
+
                 except Exception as e:
                     raise e
             elif mode == 'sentence_roberta':
@@ -105,7 +114,7 @@ class QueryGraphBuilder():
                 'C': ['B'],
                 'D': ['B']}
         }
-    
+
     def __get_stopwords(self):
         stops = stopwords.words('english')
         stops.remove('where')
@@ -188,19 +197,19 @@ WHERE
         start = time.time()
         ret = function(*args)
         elapsed = time.time() - start
-        logging.debug(f"{desc} Elapsed time: {elapsed}") 
+        logging.debug(f"{desc} Elapsed time: {elapsed}")
         return ret
 
     def __are_there_unlabeled_edges(self, Q):
         # None when all labeled
         res = next((edge for edge in Q.edges(data=True) if not edge[2]), None)
         return res is not None
-    
+
     def __get_intersection(self, cn, entities):
         cn_set = set(cn)
         entities_set = set(entities)
         return list(cn_set.intersection(entities_set))
-    
+
     """
     Build query graph.
     """
@@ -216,7 +225,7 @@ WHERE
             Q, NS, cn=self.build_step(question, cn, Q, NS, entities, entities_texts)
 
         return Q
-    
+
     """
     Prepare graph builder.
     """
@@ -249,9 +258,9 @@ WHERE
                     NS: {NS}
                     """)
             unlabeled_node=NS[0]
-            
+
             intersection_cn_entities = self.__get_intersection(cn, entities)
-            
+
             if len(intersection_cn_entities) > 1:
                 raise Exception(f"""
                     Intersection should give only 1 value.
@@ -483,23 +492,23 @@ WHERE
                     label = self.__parse_predicate(pred.value)
 
                 tmp = triples[triples.label == label]
-                    
-                
+
+
                 if len(tmp) > 1:
-                    raise Exception("There should be only 1 duplicate.") 
-                
+                    raise Exception("There should be only 1 duplicate.")
+
                 triple = {
                             "pred": pred.n3(),
                             "label": label,
                             "given": given.value,
                             "entity": entity.n3()
                          }
-                if tmp.empty:  
+                if tmp.empty:
                     triples = triples.append(triple, ignore_index=True)
                 else:
                     if "http://dbpedia.org/ontology/" in pred.value:
                         triples.iloc[tmp.index.values[0]] = triple
-                    
+
             return triples
 
         triples = generate_results(results)
@@ -525,13 +534,13 @@ WHERE
             return self.__get_most_relevant_relation_sentence_roberta(question, R, entities_texts, lambda_param)
         elif self.mode == 'stacked':
             return self.__get_most_relevant_relation_stacked_embeddings(question, R, entities_texts, lambda_param)
-    
+
     """
     Get most relevant relation using given embedding and levenshtein_distance.
     """
     def __get_most_relevant_relation_glove_levenshtein(self, question, R, entities_texts, lambda_param):
         unique_relations=R
-        
+
         # preprocess question
         question = self.__preprocess_question(question, entities_texts)
 
@@ -567,7 +576,7 @@ WHERE
         # get top 10 relations
         top_10_relations = self.__get_top_relevants(R, relevances)
         return top_10_relations.iloc[0], top_10_relations[['pred', 'relevance']].iloc[0:10]
-    
+
     """
     Get most relevant relation using stacked word level embeddings
     """
@@ -620,7 +629,7 @@ WHERE
 
             relevance = 1 - spatial.distance.cosine(flair_question.embedding.tolist(), flair_relation.embedding.tolist())
             relevances.append(relevance)
-        
+
         relevances=np.array(relevances)
 
         # get top 10 relations
@@ -633,7 +642,7 @@ WHERE
     """
     def __get_most_relevant_relation_glove_levenshtein_old(self, question, R, entities_texts, lambda_param):
         unique_relations=R
-        
+
         # preprocess question
         question = self.__preprocess_question(question, entities_texts)
 
@@ -673,7 +682,7 @@ WHERE
         top_10_relations = self.__get_top_relevants(R, relevances)
 
         return top_10_relations.iloc[0], top_10_relations[['pred', 'relevance']].iloc[0:10]
-    
+
     def __preprocess_question(self, question, entities_texts):
         # remove entities
         for entity_text in entities_texts:
