@@ -42,7 +42,9 @@ import java.util.concurrent.Callable;
   description = "Extracts Structural query graph from SPARQL queries.\n"+
     "It reads queries from '--input-file' and then prints query graph to stdout.\n"+
     "Usage:\n"+
-    "java -cp file.jar com.mycompany.app.App --input-file /path/to/input-file.csv > /path/to/output-file.csv"
+    "java -cp file.jar com.mycompany.app.App --input-file /path/to/input-file.csv > /path/to/output-file.csv\n"+
+    "`dict_of_dicts` format for evaluation:\n"+
+    "java -cp file.jar com.mycompany.app.App -f dict_of_dicts --input-file /path/to/input-file.csv > /path/to/output-file.csv"
 )
 class Main implements Callable<Integer> {
 
