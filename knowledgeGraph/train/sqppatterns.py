@@ -27,7 +27,6 @@ def get_pattern_from_graph(graph, patterns):
     # pattern not found
     return "p_notFound"
 
-
 def get_patterns():
     p0 = {'A': []}
     p1 = {'A': ['B']}
@@ -87,7 +86,7 @@ def get_patterns():
 
 
 @click.command()
-@click.option('--action', type=click.Choice(['prepare-query', 'get-pattern'], case_sensitive=False), help='Main action')
+@click.option('--action', type=click.Choice(['prepare-query', 'get-pattern', 'prepare-evaluation'], case_sensitive=False), help='Main action')
 @click.option('-i', '--input-file', help='Input file containing data in json format. Needed by both actions.')
 @click.option('-o', '--output-file',
               help='Output file created by the chosen action.'
@@ -140,6 +139,48 @@ def go(action, input_file, output_file, input_file_graph):
 
         # save patterns
         data["patterns"] = graph_df["patterns"]
+
+        print(f"Writing data with patterns to {output_file}...")
+        data.to_csv(output_file)
+
+    elif action == 'prepare-evaluation':
+
+        if not input_file_graph:
+            print("ERROR: '--input-file-graph' must be specified.")
+            sys.exit(1)
+
+        data = pd.read_json(input_file)
+
+        graph_df = pd.read_table(
+            input_file_graph, header=None, names=["graph"])
+        graph_df["dicts"] = graph_df["graph"].apply(lambda x: json.loads(x))
+
+        # import pdb
+        # pdb.set_trace()
+
+        try:
+            testd = graph_df["dicts"].iloc[0]
+            testd_inner = testd[next(iter(testd.keys()))]
+            testd_inner_inner = testd_inner[next(iter(testd_inner.keys()))]
+        except AttributeError as e:
+            print("""ERROR: --input-file-graph json lines have too few levels.
+            Probably you passed a `dict_to_lists` like file.
+            Instead a `dict_to_dicts` like file is required!
+            """, file=sys.stderr)
+            sys.exit(1)
+
+        # extract patterns
+        patterns = get_patterns()
+        graph_df["patterns"] = graph_df["dicts"].apply(lambda x: get_pattern_from_graph(x, patterns))
+
+        print("Value counts:")
+        print(graph_df["patterns"].value_counts())
+
+        # save patterns
+        data["patterns"] = graph_df["patterns"]
+
+        # save graphs as strings
+        data["graph"] = graph_df["graph"]
 
         print(f"Writing data with patterns to {output_file}...")
         data.to_csv(output_file)
