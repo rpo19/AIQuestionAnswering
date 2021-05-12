@@ -2,9 +2,6 @@
 import click
 import pandas as pd
 
-from tqdm import tqdm
-tqdm.pandas()
-
 import os
 import sys
 import networkx as nx
@@ -37,7 +34,11 @@ def load_models_kgqa():
 
     return pattern_classifier, entity_extractor, query_graph_builder, query_generator
 
-def ask_kgqa(question, pattern_classifier, entity_extractor, query_graph_builder, query_generator):
+COUNT = 0
+def ask_kgqa(question, pattern_classifier, entity_extractor, query_graph_builder, query_generator, length):
+    global COUNT
+    print(f'\r{COUNT}/{length}', end='')
+    COUNT += 1
     # classify question with pattern
     patterns, _ = pattern_classifier.transform(question)
 
@@ -66,13 +67,20 @@ def ask_kgqa(question, pattern_classifier, entity_extractor, query_graph_builder
 @click.argument('input', type=click.Path(exists=True))
 @click.argument('output', type=click.Path())
 def main(input, output):
+    print("Loading input csv")
     df = pd.read_csv(input, index_col=0)
+    print("Loading KGQA")
     pattern_classifier, entity_extractor, query_graph_builder, query_generator = load_models_kgqa()
+    print("Loaded KGQA :)")
 
-    df[['predicted_query', 'predicted_pattern', 'predicted_entities']] = df["corrected_question"].progress_apply(
+    length = df.shape[0]
+
+    print("Start asking...")
+    df[['predicted_query', 'predicted_pattern', 'predicted_entities']] = df["corrected_question"].apply(
         lambda question: pd.Series(
-            ask_kgqa(question, pattern_classifier, entity_extractor, query_graph_builder, query_generator)))
+            ask_kgqa(question, pattern_classifier, entity_extractor, query_graph_builder, query_generator, length)))
 
+    print("\nDone :) Writing to output...")
     df.to_csv(output)
 
 if __name__ == "__main__":
