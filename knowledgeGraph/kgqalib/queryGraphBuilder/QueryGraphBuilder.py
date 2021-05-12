@@ -287,6 +287,10 @@ WHERE
         R = self.__get_time("Get relations", self.__get_relations, (Q, NS, cn))
         logging.debug(f"Got relations: {R.shape}")
 
+        if R.shape[0] == 0:
+            logging.debug('No relations found. Aborting...')
+            return None, [], None
+
         r, r_top_10 = self.__get_time("Get most relevant", self.__get_most_relevant_relation, (question, R, entities_text))
 
         # get an unlabelled node in NS which has a relation respecting r direction
@@ -539,6 +543,10 @@ WHERE
     Get most relevant relation using given embedding and levenshtein_distance.
     """
     def __get_most_relevant_relation_glove_levenshtein(self, question, R, entities_texts, lambda_param):
+        if R.shape[0] == 0:
+            logging.debug('__get_most_relevant_relation_glove_levenshtein no relations.')
+            return None, []
+
         unique_relations=R
 
         # preprocess question
@@ -558,7 +566,7 @@ WHERE
                 for question_token in flair_question:
                     rel_token_embedding = rel_token.embedding.tolist()
                     question_token_embedding = question_token.embedding.tolist()
-                    
+
 
                     cos_sim = 1 - spatial.distance.cosine(rel_token_embedding, question_token_embedding)
                     if math.isnan(cos_sim):
@@ -571,7 +579,7 @@ WHERE
 
             relevances.append(relevance/len(flair_relation.tokens))
         relevances=np.array(relevances)
-        
+
 
         # get top 10 relations
         top_10_relations = self.__get_top_relevants(R, relevances)
