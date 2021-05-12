@@ -53,12 +53,28 @@ class Main implements Callable<Integer> {
     )
     private String inputFile;
 
+    @Option(
+        names = {"-f", "--format"},
+        paramLabel = "FORMAT",
+        description = "Output format of the graph; between \"dict_of_lists\" (default)" +
+                        "and \"dict_of_dicts\" (used in evaluation)."
+    )
+    private String format;
+
+    private int FORMAT_DICT_OF_LISTS = 0;
+    private int FORMAT_DICT_OF_DICTS = 1;
+    private int FORMAT = FORMAT_DICT_OF_LISTS;
+
     @Override
     public Integer call() {
 
         if (inputFile == null) {
             System.err.println("ERROR: '--input-file' must be specified.");
             return 1;
+        }
+
+        if (format != null && format.equals("dict_of_dicts")) {
+            FORMAT = FORMAT_DICT_OF_DICTS;
         }
 
         Pattern pattern = Pattern.compile("^[\"\\s]+(.*)[\"\\s]+$");
@@ -96,6 +112,8 @@ class Main implements Callable<Integer> {
 
                 final Set<TriplePath> triplesSet = new HashSet<TriplePath>();
                 final Map<Node, List<Node>> graphMap = new HashMap<Node, List<Node>>();
+                // dict of dicts
+                final HashMap<Node, HashMap<Node, String>> graphMapDoD = new HashMap<Node, HashMap<Node, String>>();
 
                 // https://stackoverflow.com/questions/15203838/how-to-get-all-of-the-subjects-of-a-jena-query
                 // This will walk through all parts of the query
@@ -116,6 +134,7 @@ class Main implements Callable<Integer> {
                 for (TriplePath triple : triplesSet) {
                     if (!triple.getPredicate().equals(type)) {
 
+                        // dict of lists
                         List<Node> currentSet = graphMap.get(triple.getSubject());
                         if (currentSet == null) {
                             currentSet = new LinkedList<Node>();
@@ -124,14 +143,35 @@ class Main implements Callable<Integer> {
                         } else {
                             currentSet.add(triple.getObject());
                         }
+
+                        // dict of dicts
+                        // node -> outerMap(node, predicate)
+                        HashMap<Node, String> outerMap = graphMapDoD.get(triple.getSubject());
+                        if (outerMap == null) {
+                            outerMap = new HashMap<Node, String>();
+                            graphMapDoD.put(triple.getSubject(), outerMap);
+                        }
+                        // predicate label
+                        String res = outerMap.put(triple.getObject(), triple.getPredicate().toString());
+                        if (res != null) {
+                            System.err.println("WARNING: label was already present in predicateMap for " + triple.toString());
+                        }
                     } else {
                         // System.err.println("Found type!!");
                         // System.err.println(triple.getPredicate());
 
+                        // dict of lists
                         List<Node> currentSet = graphMap.get(triple.getSubject());
                         if (currentSet == null) {
                             currentSet = new LinkedList<Node>();
                             graphMap.put(triple.getSubject(), currentSet);
+                        }
+
+                        // dict of dicts
+                        HashMap<Node, String> outerMap = graphMapDoD.get(triple.getSubject());
+                        if (outerMap == null) {
+                            outerMap = new HashMap<Node, String>();
+                            graphMapDoD.put(triple.getSubject(), outerMap);
                         }
                     }
                 }
@@ -139,13 +179,33 @@ class Main implements Callable<Integer> {
                 JSONObject outJSON = new JSONObject();
 
                 // System.out.println(new JSONObject(graphMap));
-                for (Map.Entry<Node, List<Node>> entry : graphMap.entrySet()) {
-                    JSONArray currentArray = new JSONArray();
-                    for (Node n : entry.getValue()) {
-                        currentArray.put(n.toString());
+                if (FORMAT == FORMAT_DICT_OF_LISTS) {
+                    for (Map.Entry<Node, List<Node>> entry : graphMap.entrySet()) {
+                        JSONArray currentArray = new JSONArray();
+                        for (Node n : entry.getValue()) {
+                            currentArray.put(n.toString());
+                        }
+                        outJSON.put(entry.getKey().toString(), currentArray);
+                        // ...
                     }
-                    outJSON.put(entry.getKey().toString(), currentArray);
-                    // ...
+                }
+                else if (FORMAT == FORMAT_DICT_OF_DICTS) {
+                    for (Map.Entry<Node, HashMap<Node, String>> level1 : graphMapDoD.entrySet()) {
+                        // for each subject
+                        JSONObject lvl1JSON = new JSONObject();
+                        for (Map.Entry<Node, String> level2 : level1.getValue().entrySet()) {
+                            // for each object
+                            // object representing predicate: contains label
+                            JSONObject lvl2JSON = new JSONObject();
+                            lvl2JSON.put("label", level2.getValue());
+
+                            lvl1JSON.put(level2.getKey().toString(), lvl2JSON);
+                        }
+                        outJSON.put(level1.getKey().toString(), lvl1JSON);
+                    }
+                }
+                else {
+                    System.err.println("ERROR: invalid format.");
                 }
 
                 System.out.println(outJSON.toString());
