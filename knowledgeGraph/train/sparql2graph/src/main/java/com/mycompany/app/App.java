@@ -56,19 +56,31 @@ class Main implements Callable<Integer> {
     private String inputFile;
 
     @Option(
-        names = {"-f", "--format"},
+        names = {"-f", "--output-format"},
         paramLabel = "FORMAT",
         description = "Output format of the graph; between \"dict_of_lists\" (default)" +
                         "and \"dict_of_dicts\" (used in evaluation)."
     )
     private String format;
 
+    @Option(
+        names = {"--input-format"},
+        paramLabel = "INPUTFORMAT",
+        description = "Input format of the query file; between \"csv\" (default)" +
+                        "and \"jsonl\" (used in evaluation)."
+    )
+    private String input_format;
+
     private int FORMAT_DICT_OF_LISTS = 0;
     private int FORMAT_DICT_OF_DICTS = 1;
     private int FORMAT = FORMAT_DICT_OF_LISTS;
 
+    private int INPUTFORMAT = 0;
+    private int INPUTFORMAT_JSONL = 1;
+    private int INPUTFORMAT_CSV = 0;
+
     @Override
-    public Integer call() {
+    public Integer call() throws Exception {
 
         if (inputFile == null) {
             System.err.println("ERROR: '--input-file' must be specified.");
@@ -77,6 +89,10 @@ class Main implements Callable<Integer> {
 
         if (format != null && format.equals("dict_of_dicts")) {
             FORMAT = FORMAT_DICT_OF_DICTS;
+        }
+
+        if (input_format != null && input_format.equals("jsonl")) {
+            INPUTFORMAT = INPUTFORMAT_JSONL;
         }
 
         Pattern pattern = Pattern.compile("^[\"\\s]+(.*)[\"\\s]+$");
@@ -94,10 +110,17 @@ class Main implements Callable<Integer> {
                 lineCount++;
                 // System.out.println(line);
                 Query q;
-                matcher = pattern.matcher(line);
-                matchFound = matcher.find();
-                if (matchFound) {
-                    line = matcher.group(1);
+                int index = -1;
+                if (INPUTFORMAT == INPUTFORMAT_CSV) {
+                    matcher = pattern.matcher(line);
+                    matchFound = matcher.find();
+                    if (matchFound) {
+                        line = matcher.group(1);
+                    }
+                } else if (INPUTFORMAT == INPUTFORMAT_JSONL) {
+                    JSONObject inputJSONline = new JSONObject(line);
+                    index = inputJSONline.getInt("index");
+                    line = inputJSONline.getString("query");
                 }
 
                 try {
@@ -107,8 +130,9 @@ class Main implements Callable<Integer> {
                     System.err.println(line);
                     // e.printStackTrace();
                     // read next line
-                    line = reader.readLine();
-                    continue;
+                    throw e;
+                    // line = reader.readLine();
+                    // continue;
                 }
                 // System.out.println(q);
 
@@ -210,6 +234,17 @@ class Main implements Callable<Integer> {
                     System.err.println("ERROR: invalid format.");
                 }
 
+                if (INPUTFORMAT == INPUTFORMAT_JSONL) {
+                    JSONObject newOutJSON = new JSONObject();
+                    newOutJSON.put("graph", outJSON);
+                    if (index < 0) {
+                        System.err.println("Error on line: "+ line);
+                        throw new Exception("index cannot be less than zero!");
+                    }
+                    newOutJSON.put("index", index);
+
+                    outJSON = newOutJSON;
+                }
                 System.out.println(outJSON.toString());
 
                 // read next line

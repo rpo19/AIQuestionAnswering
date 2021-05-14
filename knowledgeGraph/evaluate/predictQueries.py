@@ -65,6 +65,11 @@ def ask_kgqa(question, pattern_classifier, entity_extractor, query_graph_builder
 @click.argument('input', type=click.Path(exists=True))
 @click.argument('output', type=click.Path())
 def main(input, output):
+    """
+    Given as input the csv file obtained from `sqppatterns prepare-evaluation`,
+    it creates the sparql queries starting from the natural language question
+    saving data in the output file in json format
+    """
     print("Loading input csv")
     df = pd.read_csv(input, index_col=0)
     print("Loading KGQA")
