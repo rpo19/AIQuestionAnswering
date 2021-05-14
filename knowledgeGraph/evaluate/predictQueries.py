@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import click
 import pandas as pd
+import json
 
 import os
 import sys
@@ -34,11 +35,8 @@ def load_models_kgqa():
 
     return pattern_classifier, entity_extractor, query_graph_builder, query_generator
 
-COUNT = 0
-def ask_kgqa(question, pattern_classifier, entity_extractor, query_graph_builder, query_generator, length):
-    global COUNT
-    print(f'\r{COUNT}/{length}', end='')
-    COUNT += 1
+def ask_kgqa(question, pattern_classifier, entity_extractor, query_graph_builder, query_generator):
+    # TODO ignore exceptions
     # classify question with pattern
     patterns, _ = pattern_classifier.transform(question)
 
@@ -76,12 +74,28 @@ def main(input, output):
     length = df.shape[0]
 
     print("Start asking...")
-    df[['predicted_query', 'predicted_pattern', 'predicted_entities']] = df["corrected_question"].apply(
-        lambda question: pd.Series(
-            ask_kgqa(question, pattern_classifier, entity_extractor, query_graph_builder, query_generator, length)))
+    COUNT=0
+    with open(output, 'a') as fw:
+        for i, row in df.iterrows():
+            md = row.to_dict()
+            md['pd_index'] = i
+            try:
+                print(f'\r{COUNT}/{length}', end='')
+                COUNT += 1
+                question = row["corrected_question"]
+                query, pattern, entities = ask_kgqa(question, pattern_classifier, entity_extractor, query_graph_builder, query_generator)
 
-    print("\nDone :) Writing to output...")
-    df.to_csv(output)
+                md['predicted_query'] = query
+                md['predicted_pattern'] = pattern
+                md['predicted_entities'] = entities
+            except Exception as e:
+                print('Exception ', e, 'on index', i)
+                md['error'] = 1
+
+            fw.write(json.dumps(md)+'\n')
+
+
+        print("\nDone :)")
 
 if __name__ == "__main__":
     main()
