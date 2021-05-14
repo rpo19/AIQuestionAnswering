@@ -64,12 +64,27 @@ def main(action, output_file, graphs_input_file, input):
             for line in fd.readlines():
                 yield json.loads(line)
 
-    df = pd.DataFrame(getLines('out.jsonl'))
+    df = pd.DataFrame(getLines(input))
     if action == 'eval':
         print(patterns(df)[0])
     elif action == 'prepare-queries':
+        if output_file is None:
+            raise Exception('output_file cannot be None for prepare-queries')
         print(f"Writing queries to {output_file} for apache jena...")
         to_jsonl(df.loc[df["predicted_query"].notna(), ["predicted_query"]], output_file)
+    elif action == 'merge-graphs':
+        if graphs_input_file is None:
+            raise Exception('graphs_input_file cannot be None for merge-graphs')
+        if output_file is None:
+            raise Exception('output_file cannot be None for merge-graphs')
+        input_graph_df = pd.read_json(graphs_input_file, orient='records', lines=True)
+        input_graph_df.index = input_graph_df['index']
+        input_graph_df.drop(columns='index', inplace=True)
+        input_graph_df.rename(columns={"graph": "predicted_graph"}, inplace=True)
+        df = df.join(input_graph_df)
+
+        df.to_json(output_file, orient='records', lines=True)
+
 
 if __name__ == '__main__':
     main()
