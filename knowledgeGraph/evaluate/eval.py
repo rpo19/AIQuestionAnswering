@@ -119,6 +119,52 @@ def categorical_node_match_permissive(attr):
                 return False
     return match
 
+# from networkx.algorithms.isomorphism
+def categorical_node_match_permissive_both_vars(attr):
+    if isinstance(attr, str):
+
+        def match(data1, data2):
+            if attr in data1 and attr in data2:
+                val1 = data1.get(attr)
+                val2 = data2.get(attr)
+                if isinstance(val1, str) and isinstance(val2, str):
+                    if val1 == val2:
+                        # exact match
+                        return True
+                    else:
+                        if val1[0] == '?' and val2[0] == '?':
+                                return True
+                        else:
+                            return False
+                else:
+                    return False
+            else:
+                return False
+    return match
+
+# from networkx.algorithms.isomorphism
+def categorical_node_match_permissive_at_least_one_var(attr):
+    if isinstance(attr, str):
+
+        def match(data1, data2):
+            if attr in data1 and attr in data2:
+                val1 = data1.get(attr)
+                val2 = data2.get(attr)
+                if isinstance(val1, str) and isinstance(val2, str):
+                    if val1 == val2:
+                        # exact match
+                        return True
+                    else:
+                        if val1[0] == '?' or val2[0] == '?':
+                                return True
+                        else:
+                            return False
+                else:
+                    return False
+            else:
+                return False
+    return match
+
 def isom(df):
     total = df.shape[0]
     correct = {
@@ -126,6 +172,8 @@ def isom(df):
         'iso_strict': 0,
         'iso_perm_strict': 0,
         'iso_perm': 0,
+        'iso_perm_at_least_one_var': 0,
+        'iso_perm_both_vars': 0,
         'total': total
     }
     for _, row in df.iterrows():
@@ -156,6 +204,17 @@ def isom(df):
             if iso_perm:
                 correct['iso_perm'] += 1
 
+            iso_perm_both_vars = nx.is_isomorphic(G1, G2,
+                node_match=categorical_node_match_permissive_both_vars("label"),
+                edge_match=categorical_node_match_strict("label"))
+            if iso_perm_both_vars:
+                correct['iso_perm_both_vars'] += 1
+
+            iso_perm_at_least_one_var = nx.is_isomorphic(G1, G2,
+                node_match=categorical_node_match_permissive_at_least_one_var("label"),
+                edge_match=categorical_node_match_strict("label"))
+            if iso_perm_at_least_one_var:
+                correct['iso_perm_at_least_one_var'] += 1
 
     correct_df = pd.DataFrame(correct.values(), columns=['accuracy'], index=correct.keys())
     correct_df['normalized'] = correct_df['accuracy'] / total
