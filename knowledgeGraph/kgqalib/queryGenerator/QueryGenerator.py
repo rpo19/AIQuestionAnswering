@@ -121,15 +121,13 @@ class QueryGenerator():
     # computes contraints for the question
     def __constraint(self, question):
         category=[]
-
+        question = question.lower()
         question= re.sub(' +', ' ', question)
-        if "how many" in question or "number of" in question or "count of" in question:
-            category.append("aggregation") # count
-
         tokens = nltk.word_tokenize(question)
         tags = [ elem[1] for elem in nltk.pos_tag(tokens)]
-        # print(tags)
-        if "VB" in tags[0]:
+        if "how many" in question or "number of" in question or "count of" in question:
+            category.append("aggregation") # count
+        elif "VB" in tags[0]:
             category.append("answer-type") # ask
 
         '''ordinal_number = contain_ordinal_number(tokens)
