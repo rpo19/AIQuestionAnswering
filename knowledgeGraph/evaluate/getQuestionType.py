@@ -2,7 +2,7 @@
 import pandas as pd 
 
 # %% load data
-lc_quad = pd.read_json('../../data/test-data.json')
+lc_quad = pd.read_json('../../data/whole.jsonl', orient='records', lines=True)
 
 # %% question types map
 question_types = {
@@ -21,8 +21,12 @@ def getQuestionType(sparql_template_id):
     return 'unexpected sparql_template_id'
 
 # %% test
-lc_quad['question_type'] = lc_quad['sparql_template_id'].apply(getQuestionType)
+lc_quad['correct_question_type'] = lc_quad['sparql_template_id'].apply(getQuestionType)
 # %% output
-print(lc_quad['question_type'].value_counts())
+print(lc_quad['correct_question_type'].value_counts())
+
+# %% save
+lc_quad.to_json('../../data/whole_cbe.jsonl', orient='records', lines=True)
+
 
 # %%
