@@ -347,6 +347,55 @@ Entities linking performance:
 """.format('-'*30, resdf.to_markdown())
     return display, resdf
 
+def predicates(df):
+    precisions = []
+    recalls = []
+    f1s = []
+    tot = df.shape[0]
+    def angularsCheck(entity):
+        if entity[0] != '<':
+            entity = '<' + entity
+        if entity[-1] != '>':
+            entity = entity + '>'
+        return entity
+    def singleMetrics(el_gold, el_pred):
+        es_gold = set(angularsCheck(e) for e in el_gold) if el_gold is not None else set()
+        es_pred = set(angularsCheck(e) for e in el_pred) if el_pred is not None else set()
+
+        intersection = es_gold & es_pred
+
+        precision = len(intersection) / (len(es_pred) + sys.float_info.min)
+        recall = len(intersection) / (len(es_gold) + sys.float_info.min)
+        f1 = 2 * precision * recall / (precision + recall + sys.float_info.min)
+
+        return precision, recall, f1
+    for i, row in df[['correct_predicates', 'predicted_predicates_from_graph']].iterrows():
+        p, r, f1 = singleMetrics(row['correct_predicates'], row['predicted_predicates_from_graph'])
+        precisions.append(p)
+        recalls.append(r)
+        f1s.append(f1)
+
+    resdf = pd.DataFrame({
+        'avgPrecision': ['{:.3f} +- {:.3f}'.format(
+                sum(precisions) / tot,
+                statistics.stdev(precisions)
+            )],
+        'avgRecall': ['{:.3f} +- {:.3f}'.format(
+                sum(recalls) / tot,
+                statistics.stdev(recalls)
+            )],
+        'avgF1': ['{:.3f} +- {:.3f}'.format(
+                sum(f1s) / tot,
+                statistics.stdev(f1s)
+            )]
+    }, index = ['mean +- std']).transpose()
+
+    display = """{}
+Predicates choice performance:
+{}
+""".format('-'*30, resdf.to_markdown())
+    return display, resdf
+
 @click.command()
 @click.option('--action', type=click.Choice(['eval', 'prepare-queries', 'merge-graphs'], case_sensitive=False), help='Main action')
 @click.option('-o', '--output-file', type=click.STRING, help='Prepare output path', default=None)
@@ -367,6 +416,7 @@ def main(action, output_file, graphs_input_file, input):
         print(patterns(df)[0])
         print(question_types(df)[0])
         print(entities(df)[0])
+        print(predicates(df)[0])
         print(isom(df)[0])
     elif action == 'prepare-queries':
         if output_file is None:
