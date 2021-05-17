@@ -4,6 +4,8 @@ import json
 import pandas as pd
 import numpy as np
 import networkx as nx
+import sys
+import statistics
 
 def graph2nx(graphdict):
     if graphdict is None:
@@ -232,7 +234,7 @@ def patterns(df):
     # confusion matrix
     tots = df['patterns'].value_counts()
     idx = sorted(tots.index)
-    cols = sorted(list(df['predicted_pattern'].value_counts().index) + ['nan', 'tot'])
+    cols = sorted(list(df['predicted_pattern'].value_counts().index)) + ['nan', 'tot']
     tot = df['patterns'].shape[0]
     cm = pd.DataFrame(np.zeros((len(idx), len(cols))),
         index = idx,
@@ -247,10 +249,41 @@ def patterns(df):
 
     accuracy = np.diag(cm[idx]).sum()/tot
 
-    normalized_cm = cm[sorted(set(cols) - {'tot'})].div(cm['tot'], axis=0)
+    normalized_cm = cm[sorted(set(cols) - {'tot', 'nan'}) + ['nan']].div(cm['tot'], axis=0)
 
     display = """{}
 Pattern prediction performance:
+Accuracy: {}
+Normalized Confusion matrix:
+{}
+Confusion matrix:
+{}
+""".format('-'*30, accuracy, normalized_cm.to_markdown(), cm.to_markdown())
+    return display, accuracy, normalized_cm, cm
+
+def question_types(df):
+    tots = df['correct_question_type'].value_counts()
+    tot = df.shape[0]
+    idx = sorted(tots.index)
+    cols = sorted(list(df['predicted_question_type'].value_counts().index)) + ['nan', 'tot']
+    cm = pd.DataFrame(np.zeros((len(idx), len(cols))),
+        index = idx,
+        columns=cols)
+    cm.index.name = 'gold'
+    for i, row in df[['correct_question_type', 'predicted_question_type']].iterrows():
+        y = row['predicted_question_type']
+        if (not isinstance(y, str)) and (y is None or np.isnan(y)):
+            y = 'nan'
+        cm.loc[row['correct_question_type'], y] += 1
+
+    cm['tot'] = tots
+
+    accuracy = np.diag(cm[idx]).sum()/tot
+
+    normalized_cm = cm[sorted(set(cols) - {'tot', 'nan'}) + ['nan']].div(cm['tot'], axis=0)
+
+    display = """{}
+Question type prediction performance:
 Accuracy: {}
 Normalized Confusion matrix:
 {}
@@ -264,6 +297,55 @@ def to_jsonl(df, outpath):
         for i, row in df.iterrows():
             line = json.dumps({"index": i, "query": row["predicted_query"]}) + "\n"
             fd.write(line)
+
+def entities(df):
+    precisions = []
+    recalls = []
+    f1s = []
+    tot = df.shape[0]
+    def angularsCheck(entity):
+        if entity[0] != '<':
+            entity = '<' + entity
+        if entity[-1] != '>':
+            entity = entity + '>'
+        return entity
+    def singleMetrics(el_gold, el_pred):
+        es_gold = set(angularsCheck(e) for e in el_gold) if el_gold is not None else set()
+        es_pred = set(angularsCheck(e) for e in el_pred) if el_pred is not None else set()
+
+        intersection = es_gold & es_pred
+
+        precision = len(intersection) / (len(es_pred) + sys.float_info.min)
+        recall = len(intersection) / (len(es_gold) + sys.float_info.min)
+        f1 = 2 * precision * recall / (precision + recall + sys.float_info.min)
+
+        return precision, recall, f1
+    for i, row in df[['correct_entities', 'predicted_entities']].iterrows():
+        p, r, f1 = singleMetrics(row['correct_entities'], row['predicted_entities'])
+        precisions.append(p)
+        recalls.append(r)
+        f1s.append(f1)
+
+    resdf = pd.DataFrame({
+        'avgPrecision': ['{:.3f} +- {:.3f}'.format(
+                sum(precisions) / tot,
+                statistics.stdev(precisions)
+            )],
+        'avgRecall': ['{:.3f} +- {:.3f}'.format(
+                sum(recalls) / tot,
+                statistics.stdev(recalls)
+            )],
+        'avgF1': ['{:.3f} +- {:.3f}'.format(
+                sum(f1s) / tot,
+                statistics.stdev(f1s)
+            )]
+    }, index = ['mean +- std']).transpose()
+
+    display = """{}
+Entities linking performance:
+{}
+""".format('-'*30, resdf.to_markdown())
+    return display, resdf
 
 @click.command()
 @click.option('--action', type=click.Choice(['eval', 'prepare-queries', 'merge-graphs'], case_sensitive=False), help='Main action')
@@ -283,6 +365,8 @@ def main(action, output_file, graphs_input_file, input):
     df = pd.read_json(input, orient='records', lines=True)
     if action == 'eval':
         print(patterns(df)[0])
+        print(question_types(df)[0])
+        print(entities(df)[0])
         print(isom(df)[0])
     elif action == 'prepare-queries':
         if output_file is None:
