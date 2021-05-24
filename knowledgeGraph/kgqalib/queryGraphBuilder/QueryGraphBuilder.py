@@ -280,7 +280,6 @@ WHERE
             NS=self.__get_adjacent_unexplored(Q)
             # get entities corresponding to NS
             cn=self.__get_candidate_entities(Q, NS, entities)
-            print(cn)
 
             return Q, NS, cn
 
