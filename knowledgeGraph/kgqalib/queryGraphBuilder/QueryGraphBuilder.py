@@ -280,6 +280,7 @@ WHERE
             NS=self.__get_adjacent_unexplored(Q)
             # get entities corresponding to NS
             cn=self.__get_candidate_entities(Q, NS, entities)
+            print(cn)
 
             return Q, NS, cn
 
@@ -692,9 +693,11 @@ WHERE
         return top_10_relations.iloc[0], top_10_relations[['pred', 'relevance']].iloc[0:10]
 
     def __preprocess_question(self, question, entities_texts):
-        # remove entities
-        for entity_text in entities_texts:
-            question = question.replace(entity_text, ' ')
+
+        if entities_texts:
+            # remove entities
+            for entity_text in entities_texts:
+                question = question.replace(entity_text, ' ')
 
         question = question.lower().replace('?', ' ?')
 
