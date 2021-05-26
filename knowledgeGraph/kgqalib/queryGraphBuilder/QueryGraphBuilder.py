@@ -22,6 +22,7 @@ from flair.embeddings import SentenceTransformerDocumentEmbeddings
 from flair.embeddings import WordEmbeddings, FlairEmbeddings, StackedEmbeddings
 import sys
 
+
 from .MmapWordEmbeddings import MmapWordEmbeddings
 
 
@@ -468,11 +469,27 @@ WHERE
         logging.debug("Relations query:")
         logging.debug(query)
 
-        try:
-            results=sparql.query(endpoint, query)
-        except Exception as e:
-            logging.error(f"Exception {e} on query:\n\n{query}")
-            raise e
+        query_success = False
+        tries = 0
+
+        while not query_success:
+            try:
+                results=sparql.query(endpoint, query, timeout=20)
+                query_success = True
+                
+            except Exception as e:
+                query_success = False
+                print('Timeout getting relations, retrying...')
+                if tries == 7:
+                    raise e
+                else:
+                    tries += 1
+                #logging.error(f"Exception {e} on query:\n\n{query}")
+                #raise e
+                
+            
+
+
 
         # def results_generator(res):
         #     # for sub,pred,obj,label,given in res:

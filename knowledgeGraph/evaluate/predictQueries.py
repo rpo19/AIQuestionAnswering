@@ -43,6 +43,7 @@ def ask_kgqa(question, pattern_classifier, entity_extractor, query_graph_builder
     # TODO ignore exceptions
     # classify question with pattern
     patterns, _ = pattern_classifier.transform(question)
+    print('Done pattern')
     
     # extract and link entities
     if entity_extractor:
@@ -53,6 +54,7 @@ def ask_kgqa(question, pattern_classifier, entity_extractor, query_graph_builder
     else:
         raise ValueError('No entities provided')
     
+    
     if not entities:
         print("Could not identify any entity.")
         return None, patterns[0], None
@@ -60,17 +62,21 @@ def ask_kgqa(question, pattern_classifier, entity_extractor, query_graph_builder
     entities_copy = entities.copy()
 
     # query graph construction
-    Q = query_graph_builder.build(question, entities, texts, patterns[0])
+    Q = query_graph_builder.build(question, entities_copy, texts, patterns[0])
+
+
 
     if not Q:
         print("Could not create a query graph.")
-        return None, patterns[0], entities_copy
+        return None, patterns[0], entities
 
     SPARQL_query, _ = query_generator.generate(question, Q)
 
+
+
     SPARQL_query.replace('\n', ' ')
 
-    return SPARQL_query, patterns[0], entities_copy
+    return SPARQL_query, patterns[0], entities
 
 def ask_all(df, output, pattern_classifier, entity_extractor, query_graph_builder, query_generator):
     length = df.shape[0]
@@ -83,6 +89,7 @@ def ask_all(df, output, pattern_classifier, entity_extractor, query_graph_builde
             md['pd_index'] = i
             try:
                 print(f'\r{COUNT}/{length}', end='')
+                print()
                 COUNT += 1
                 question = row["corrected_question"]
                 query, pattern, entities = ask_kgqa(question, pattern_classifier, entity_extractor, query_graph_builder, query_generator)
@@ -119,7 +126,7 @@ def ask_from_entities(df, output, pattern_classifier, entity_extractor, query_gr
 
                 md['predicted_query'] = query
                 md['predicted_pattern'] = pattern
-                md['correct_entities'] = entities
+                md['predicted_entities'] = entities
             except Exception as e:
                 print('Exception ', e, 'on index', i)
                 md['error'] = 1
