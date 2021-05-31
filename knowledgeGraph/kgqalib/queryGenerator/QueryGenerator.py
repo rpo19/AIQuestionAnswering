@@ -45,10 +45,10 @@ class QueryGenerator():
 
         return pd.DataFrame([[item.n3() for item in row] for row in results], columns=['Answers'])
 
-    def generate_and_ask(self, question, graph, endpoint='http://dbpedia.org/sparql'):
+    def generate_and_ask(self, question, graph, entities, endpoint='http://dbpedia.org/sparql'):
         query, constraints = self.generate(question, graph)
 
-        return self.ask(query, constraints, endpoint)
+        return self.ask(graph, entities, query, constraints, endpoint)
 
 
     def __generate_triple(self, Q, edge):
