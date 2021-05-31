@@ -17,7 +17,7 @@ from text.ftqalib.ftqa.FreeTextQA import FreeTextQA
 def loadKGQA():
     ## KGQA
     MODEL_PATH = '../data/models/pattern_classifier.h5'
-    EMBEDDINGS_PATH = './data/glove.840B.300d.gensim'
+    EMBEDDINGS_PATH = '../data/glove.840B.300d.gensim'
     GRAPH_BUILDER_MODE = 'glove' # 'glove' | 'stacked' | 'sentence_roberta'
     NER_MODE = 'spotlight' # 'spotlight' | 'custom'
 
@@ -72,7 +72,7 @@ def askFTQAwiki(free_text, question):
     from span
     """
     start = time.time()
-    answer = free_text.answerFromWiki(question)
+    answer = free_text.answerFromWiki(question, top=3)
     return time.time() - start, answer
 
 def askFTQAnernel(free_text, question, entity_extractor):
@@ -86,7 +86,7 @@ def askFTQAnernel(free_text, question, entity_extractor):
     # extract and link entities
     entity, text = entity_extractor.extractMain(question)
     # get answers from wikipedia
-    answer = free_text.answerFromWiki(question, entity)
+    answer = free_text.answerFromWiki(question, entity=entity, top=3)
     return time.time() - start, answer
 
 def gen_col(df, index):
