@@ -9,6 +9,9 @@ from utils import load_models_kgqa, load_models_ftqa, to_dict_of_dicts
 from flask import request, abort, jsonify
 import traceback
 
+import logging
+logging.getLogger().setLevel(logging.DEBUG)
+
 
 app = Flask(__name__)
 CORS(app)
