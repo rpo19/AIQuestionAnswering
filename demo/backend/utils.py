@@ -15,6 +15,7 @@ def load_models_kgqa():
     EMBEDDINGS_PATH = './data/glove.840B.300d.gensim'
     GRAPH_BUILDER_MODE = 'glove' # 'glove' | 'stacked' | 'sentence_roberta'
     NER_MODE = 'spotlight' # 'spotlight' | 'custom'
+    ENTITIES_CAP = 50
 
 
     # instantiate modules
@@ -25,7 +26,7 @@ def load_models_kgqa():
     entity_extractor = DBPediaEntityExtractor(mode=NER_MODE)
 
     ## Query graph builder
-    query_graph_builder = QueryGraphBuilder(mode=GRAPH_BUILDER_MODE, path_to_embeddings=EMBEDDINGS_PATH)
+    query_graph_builder = QueryGraphBuilder(mode=GRAPH_BUILDER_MODE, path_to_embeddings=EMBEDDINGS_PATH, entities_cap=ENTITIES_CAP)
 
     ## Query generator
     query_generator = QueryGenerator()
