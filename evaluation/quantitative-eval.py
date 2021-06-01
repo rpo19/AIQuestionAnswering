@@ -42,6 +42,7 @@ def loadFTQA():
 
 
 def askKGQA(pattern_classifier, entity_extractor, query_graph_builder, query_generator, question):
+    print('KGQA - q:', question)
     start = time.time()
     # classify question with pattern
     patterns, raw_probs = pattern_classifier.transform(question)
@@ -50,44 +51,62 @@ def askKGQA(pattern_classifier, entity_extractor, query_graph_builder, query_gen
     # extract and link entities
     entities, texts = entity_extractor.extract(question)
     print('Extracted entities:', entities)
+    try:
+        # query graph construction
+        Q = query_graph_builder.build(question, entities, texts, patterns[0])
 
-    # query graph construction
-    Q = query_graph_builder.build(question, entities, texts, patterns[0])
-
-    # build SPARQL query and retrieve answers
-    answers_df = query_generator.generate_and_ask(question, Q, entities)
-
-    return time.time() - start, answers_df['Answers'].values
+        # build SPARQL query and retrieve answers
+        answers_df = query_generator.generate_and_ask(question, Q, entities)
+        print(answers_df['Answers'].values)
+        return time.time() - start, answers_df['Answers'].values
+    except:
+        return None, None
 
 def askFTQA(free_text, question, span):
     """
     from span
     """
+    print('Free text from span - q:', question)
     start = time.time()
-    answer = free_text.answerFromSpan(question, span)
-    return time.time() - start, answer
+    try:
+        answer = free_text.answerFromSpan(question, span)
+        print(answer)
+        return time.time() - start, answer
+    except:
+        return None, None
 
 def askFTQAwiki(free_text, question):
     """
     from span
     """
+    print('Free text wiki - q:', question)
     start = time.time()
-    answer = free_text.answerFromWiki(question, top=3)
-    return time.time() - start, answer
+    try:
+        answer = free_text.answerFromWiki(question, top=3)
+        print(answer)
+        return time.time() - start, answer
+    except:
+        return None, None
 
 def askFTQAnernel(free_text, question, entity_extractor):
     """
     ner nel
     """
+    print('Free text ner nel - q:', question)
     if entity_extractor is None:
         print("ERROR: run with action=all for FTQ NER NEL", file=sys.stderr)
         sys.exit(1)
     start = time.time()
     # extract and link entities
     entity, text = entity_extractor.extractMain(question)
-    # get answers from wikipedia
-    answer = free_text.answerFromWiki(question, entity=entity, top=3)
-    return time.time() - start, answer
+    try:
+        # get answers from wikipedia
+        answer = free_text.answerFromWiki(question, entity=entity, top=3)
+        print(answer)
+        return time.time() - start, answer
+    except:
+        return None, None
+    
 
 def gen_col(df, index):
     for i in df:
