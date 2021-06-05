@@ -239,7 +239,7 @@ def patterns(df):
     cm = pd.DataFrame(np.zeros((len(idx), len(cols))),
         index = idx,
         columns=cols)
-    cm.index.name = 'gold'
+    cm.index.name = 'gold\\'
     for i, row in df[['patterns', 'predicted_pattern']].iterrows():
         y = row['predicted_pattern']
         if type(y) != str and (y is None or np.isnan(y)):
@@ -249,16 +249,27 @@ def patterns(df):
 
     accuracy = np.diag(cm[idx]).sum()/tot
 
+    recall = (np.diag(cm[idx]) / tots.sort_index()).mean()
+
+    tot_pred = cm[idx].apply(sum, axis=0)
+
+    precision = (np.diag(cm[idx]) / tot_pred.sort_index()).mean()
+
+    f1 = 2 * precision * recall / (precision + recall)
+
     normalized_cm = cm[sorted(set(cols) - {'tot', 'nan'}) + ['nan']].div(cm['tot'], axis=0)
 
     display = """{}
 Pattern prediction performance:
 Accuracy: {}
+Precision: {}
+Recall: {}
+F1: {}
 Normalized Confusion matrix:
 {}
 Confusion matrix:
 {}
-""".format('-'*30, accuracy, normalized_cm.to_markdown(), cm.to_markdown())
+""".format('-'*30, accuracy, precision, recall, f1, normalized_cm.to_markdown(), cm.to_markdown())
     return display, accuracy, normalized_cm, cm
 
 def question_types(df):
@@ -280,16 +291,27 @@ def question_types(df):
 
     accuracy = np.diag(cm[idx]).sum()/tot
 
+    recall = (np.diag(cm[idx]) / tots.sort_index()).mean()
+
+    tot_pred = cm[idx].apply(sum, axis=0)
+
+    precision = (np.diag(cm[idx]) / tot_pred.sort_index()).mean()
+
+    f1 = 2 * precision * recall / (precision + recall)
+
     normalized_cm = cm[sorted(set(cols) - {'tot', 'nan'}) + ['nan']].div(cm['tot'], axis=0)
 
     display = """{}
 Question type prediction performance:
 Accuracy: {}
+Precision: {}
+Recall: {}
+F1: {}
 Normalized Confusion matrix:
 {}
 Confusion matrix:
 {}
-""".format('-'*30, accuracy, normalized_cm.to_markdown(), cm.to_markdown())
+""".format('-'*30, accuracy, precision, recall, f1, normalized_cm.to_markdown(), cm.to_markdown())
     return display, accuracy, normalized_cm, cm
 
 def to_jsonl(df, outpath):
