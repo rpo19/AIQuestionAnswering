@@ -137,16 +137,16 @@ class QueryGenerator():
 
     # TODO: put here gabri's code to distinguish between different question types
     def __generate_head_and_tail(self, question, variable):
-        qustion_type = 'normal'
+        question_type = 'normal'
         # print("Question: ", question)
         constraints = self.__constraint(question)
         # print("Constraints: ", constraints)
         if "answer-type" in constraints:
             head = "ASK "
-            qustion_type = 'ask'
+            question_type = 'ask'
         elif "aggregation" in constraints:
             head = "SELECT ( COUNT ( DISTINCT "+ variable +") as ?count ) "
-            qustion_type = 'aggregation'
+            question_type = 'aggregation'
         else:
             head = "SELECT DISTINCT " + variable + " WHERE "
 
