@@ -108,5 +108,5 @@ if __name__ == '__main__':
     if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
         pattern_classifier, entity_extractor, query_graph_builder, query_generator = load_models_kgqa()
         free_text_answerer = load_models_ftqa()
-
-    app.run(debug=True)
+    debug = False if os.environ.get("PRODUCTION") == "true" else True
+    app.run(debug=debug)

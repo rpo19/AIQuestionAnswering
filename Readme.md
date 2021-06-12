@@ -21,6 +21,7 @@ Install docker and docker-compose (https://docs.docker.com/get-docker/ https://d
 ```
 cd docker
 docker-compose up -d
+# some time is required at first start to download models
 ```
 Now open [http://localhost](http://localhost) and you should access QA demo.
 

@@ -1,5 +1,6 @@
 FROM node:15 as builder
-COPY ../demo/frontend /frontend
+# manually copy :demo/frontend here
+COPY frontend /frontend
 RUN cd /frontend && npm install && npx ng build --configuration=production
 
 

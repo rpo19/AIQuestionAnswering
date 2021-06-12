@@ -7,6 +7,9 @@ services:
             dockerfile: Dockerfile-backend
         ports:
             - 127.0.0.1:5000:5000
+        # # persist models in external volume
+        # volumes:
+        #     - ./data:/app/backend/data
     webapp:
         image: rpozzi/ai_qa_webapp:latest
         build:
