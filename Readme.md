@@ -4,6 +4,8 @@ This project is for the master course of Artificial Intelligence from Universit√
 
 The project aims to explore and compare open domain question answering approaches over both structured (Knowledge Graph) and unstructured data (Free-text), using respectively DBPedia and Wikipedia as information sources. A prototype of both types of approaches has been implemented. This has highlighted the issues and complexities behind the implementation of a QA system in a real-world scenario. To understand the pros and cons of the implemented approaches different kinds of evaluation have been performed.
 
+To know more about the project look at the [Presentation.pdf](Presentation.pdf)
+
 ![Demp](qascreen.png)
 
 # Directory structure
