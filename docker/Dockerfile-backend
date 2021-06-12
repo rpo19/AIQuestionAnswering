@@ -2,7 +2,7 @@ FROM python:3.8
 
 WORKDIR /app
 
-RUN git clone git@github.com:rpo19/AIQuestionAnswering.git backend
+RUN git clone https://github.com/rpo19/AIQuestionAnswering.git backend
 
 WORKDIR /app/backend
 
