@@ -10,3 +10,5 @@ scipy==1.6.1
 spacy==3.0.3
 spacy-dbpedia-spotlight==0.2.0
 tabulate==0.8.9
+flair==0.8.0.post1
+click==7.1.2

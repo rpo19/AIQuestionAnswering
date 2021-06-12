@@ -1,0 +1,19 @@
+FROM python:3.8
+
+WORKDIR /app
+
+RUN git clone git@github.com:rpo19/AIQuestionAnswering.git backend
+
+WORKDIR /app/backend
+
+RUN pip install -r demo/backend/requirements.txt && \
+    pip install -r knowledgeGraph/kgqalib/requirements.txt && \
+    pip install -r text/ftqalib/requirements.txt && \
+    python -m spacy download en_core_web_lg && \
+    python -c 'import nltk;nltk.download("stopwords")' && \
+    mkdir -p data/models && \
+    wget "https://raw.githubusercontent.com/circulosmeos/gdown.pl/master/gdown.pl" -O /tmp/gdown.pl && \
+    chmod +x /tmp/gdown.pl && \
+    /tmp/gdown.pl "https://drive.google.com/file/d/1wHP5tHvBiG5aHuCHxotYQYLeQxRKI-gm/view?usp=sharing" data/glove.840B.300d.gensim && \
+    /tmp/gdown.pl "https://drive.google.com/file/d/14OtRDFrT-mAEDSqBX7dQKJGAG39xPd7c/view?usp=sharing" data/models/pattern_classifier.h5 && \
+    rm /tmp/gdown.pl
