@@ -10,9 +10,9 @@ import { DataFTQA, DataKGQA } from '../../models/data';
 export class ApiService {
 
 	constructor(private _http: HttpClient, @Inject(TOKENAPI) private _api: string) { }
-	
+
     ask_kgqa(question: string): Observable<DataKGQA> {
-		return this._http.get<DataKGQA>(`${this._api}/api/kgqa?q=${question}`);
+		return this._http.get<DataKGQA>(`${this._api}api/kgqa?q=${question}`);
 	}
 
 	ask_ftqa(formValues: any): Observable<DataFTQA> {
@@ -21,7 +21,7 @@ export class ApiService {
 			options += `&span=${formValues.span}`
 		}
 		console.log(options)
-		return this._http.get<DataFTQA>(`${this._api}/api/ftqa?q=${formValues.question + options}`);
+		return this._http.get<DataFTQA>(`${this._api}api/ftqa?q=${formValues.question + options}`);
 	}
 
 }
